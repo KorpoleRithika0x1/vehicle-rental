@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #1a1a2e;
+  background: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-ink antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at top left, rgba(217, 164, 65, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(247, 243, 238, 0.6), transparent 34%);
+}
+
+.glass-panel {
+  @apply rounded-3xl border border-white/20 bg-white/85 shadow-soft backdrop-blur;
+}
+
+.section-grid {
+  @apply grid gap-6 md:grid-cols-2 xl:grid-cols-3;
+}
+
+.hero-card {
+  @apply rounded-[2rem] border border-white/20 bg-white/10 p-6 text-white backdrop-blur-sm;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
