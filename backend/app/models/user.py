@@ -25,6 +25,7 @@ class User(Base):
         nullable=False,
         server_default=UserRole.CUSTOMER.value,
     )
+    profile_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     phone_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"), default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())

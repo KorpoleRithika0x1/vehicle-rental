@@ -17,7 +17,9 @@ engine = create_async_engine(
     settings.database_url,
     pool_size=10,
     max_overflow=20,
-    pool_pre_ping=True,
+    # aiomysql + current SQLAlchemy stack can raise ping(reconnect) signature mismatch.
+    # Disable pre-ping to avoid TypeError during checkout.
+    pool_pre_ping=False,
     future=True,
 )
 

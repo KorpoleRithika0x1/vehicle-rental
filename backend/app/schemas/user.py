@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
 from app.models.user import UserRole
 from app.schemas.common import ORMBaseModel
@@ -36,6 +36,7 @@ class RefreshTokenRequest(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
     phone_number: str | None = Field(default=None, max_length=20)
+    profile_image_url: HttpUrl | None = None
 
     @field_validator("phone_number")
     @classmethod
@@ -49,12 +50,17 @@ class RoleUpdateRequest(BaseModel):
     role: UserRole
 
 
+class UserStatusUpdateRequest(BaseModel):
+    is_active: bool
+
+
 class UserResponse(ORMBaseModel):
     id: int
     name: str
     email: EmailStr
     role: UserRole
     phone_number: str | None = None
+    profile_image_url: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

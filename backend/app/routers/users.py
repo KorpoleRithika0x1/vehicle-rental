@@ -6,7 +6,7 @@ from app.database import get_session
 from app.dependencies import require_role
 from app.models import User, UserRole
 from app.schemas.common import MessageResponse, PaginatedResponse
-from app.schemas.user import RoleUpdateRequest, UserResponse
+from app.schemas.user import RoleUpdateRequest, UserResponse, UserStatusUpdateRequest
 
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -83,3 +83,23 @@ async def deactivate_user(
     user.is_active = False
     await db.commit()
     return MessageResponse(message="User deactivated successfully.")
+
+
+@router.put("/{user_id}/status", response_model=UserResponse)
+async def update_user_status(
+    user_id: int,
+    payload: UserStatusUpdateRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+) -> UserResponse:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    if user.id == current_user.id and not payload.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin cannot block their own account.")
+
+    user.is_active = payload.is_active
+    await db.commit()
+    await db.refresh(user)
+    return UserResponse.model_validate(user)

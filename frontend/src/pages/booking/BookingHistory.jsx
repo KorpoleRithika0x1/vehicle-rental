@@ -32,8 +32,8 @@ export default function BookingHistory() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Booking History</p>
-        <h1 className="mt-4 font-heading text-5xl text-ink">Track every trip request and status change.</h1>
+        <h1 className="text-4xl font-bold text-ink">My Bookings</h1>
+        <p className="mt-2 text-sm text-slate-400">View and manage your all car bookings</p>
       </div>
 
       <div className="space-y-5">

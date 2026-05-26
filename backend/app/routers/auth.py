@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -12,7 +12,9 @@ from app.schemas.user import (
     TokenResponse,
     UserResponse,
 )
+from app.schemas.common import ImageUploadResponse
 from app.services.auth_service import authenticate_user, refresh_tokens, register_user, update_profile
+from app.services.upload_service import upload_image_to_cloudinary
 from app.limiter import limiter
 
 
@@ -52,6 +54,19 @@ async def put_profile(
 ) -> UserResponse:
     user = await update_profile(db, current_user, payload)
     return UserResponse.model_validate(user)
+
+
+@router.post("/profile/image", response_model=ImageUploadResponse)
+async def upload_profile_image(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> ImageUploadResponse:
+    image_url = await upload_image_to_cloudinary(file, folder="vehicle-rental/profiles")
+    current_user.profile_image_url = image_url
+    await db.commit()
+    await db.refresh(current_user)
+    return ImageUploadResponse(image_url=image_url)
 
 
 @router.post("/refresh", response_model=TokenResponse)

@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     redis_lock_expire_seconds: int = 10
     page_size_default: int = 12
     page_size_max: int = 50
+    cloudinary_cloud_name: str | None = Field(default=None, alias="CLOUDINARY_CLOUD_NAME")
+    cloudinary_api_key: str | None = Field(default=None, alias="CLOUDINARY_API_KEY")
+    cloudinary_api_secret: str | None = Field(default=None, alias="CLOUDINARY_API_SECRET")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod

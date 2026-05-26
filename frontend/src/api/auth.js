@@ -19,3 +19,12 @@ export async function updateProfile(payload) {
   const { data } = await apiClient.put('/auth/profile', payload);
   return data;
 }
+
+export async function uploadProfileImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await apiClient.post('/auth/profile/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}

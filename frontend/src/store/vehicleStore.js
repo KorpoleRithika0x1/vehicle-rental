@@ -20,7 +20,11 @@ export const useVehicleStore = create((set, get) => ({
   pagination: { total: 0, page: 1, page_size: 12, total_pages: 1, cacheStatus: 'MISS' },
   fetchVehicles: async (params = {}) => {
     const mergedFilters = { ...get().filters, ...params };
-    const data = await fetchVehicles(mergedFilters);
+    // Strip empty/false values before sending to API
+    const cleanParams = Object.fromEntries(
+      Object.entries(mergedFilters).filter(([, v]) => v !== '' && v !== false && v !== null && v !== undefined)
+    );
+    const data = await fetchVehicles(cleanParams);
     set({
       vehicles: data.items,
       filters: mergedFilters,

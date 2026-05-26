@@ -16,10 +16,10 @@ export default function VehicleFilters({ filters, onChange, onReset }) {
         </label>
         <select value={filters.vehicle_type} onChange={(event) => onChange('vehicle_type', event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none">
           <option value="">All types</option>
-          <option value="car">Car</option>
+          <option value="car">Sedan</option>
           <option value="suv">SUV</option>
           <option value="van">Van</option>
-          <option value="truck">Truck</option>
+          <option value="truck">Scooty</option>
           <option value="bike">Bike</option>
         </select>
         <input

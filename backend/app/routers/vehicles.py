@@ -1,14 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.dependencies import get_current_user, require_role
 from app.models import User, UserRole
 from app.redis_client import get_redis
-from app.schemas.common import MessageResponse, PaginatedResponse
+from app.schemas.common import ImageUploadResponse, MessageResponse, PaginatedResponse
 from app.schemas.vehicle import (
     AvailabilityResponse,
     VehicleCreateRequest,
@@ -28,9 +28,22 @@ from app.services.vehicle_service import (
     list_vehicles,
     update_vehicle,
 )
+from app.services.upload_service import upload_image_to_cloudinary
 
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
+
+
+@router.post(
+    "/images/upload",
+    response_model=ImageUploadResponse,
+)
+async def upload_image_file(
+    file: UploadFile = File(...),
+    _: User = Depends(require_role(UserRole.VEHICLE_MANAGER, UserRole.ADMIN)),
+) -> ImageUploadResponse:
+    image_url = await upload_image_to_cloudinary(file, folder="vehicle-rental/vehicles")
+    return ImageUploadResponse(image_url=image_url)
 
 
 @router.get("/", response_model=PaginatedResponse[VehicleListItem])

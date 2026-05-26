@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Footer from './components/common/Footer';
@@ -9,8 +10,10 @@ import { useAuthStore } from './store/authStore';
 import AppRouter from './router/AppRouter';
 
 export default function App() {
+  const location = useLocation();
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const logout = useAuthStore((state) => state.logout);
+  const isDashboardRoute = location.pathname.startsWith('/dashboard');
 
   useEffect(() => {
     initializeAuth();
@@ -28,11 +31,11 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="app-shell min-h-screen">
-        <Navbar />
+        {!isDashboardRoute ? <Navbar /> : null}
         <main>
           <AppRouter />
         </main>
-        <Footer />
+        {!isDashboardRoute ? <Footer /> : null}
         <ToastContainer />
         <Modal />
       </div>

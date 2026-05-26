@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -29,12 +30,15 @@ settings = get_settings()
 
 
 async def invalidate_vehicle_cache(redis: Redis, vehicle_id: int, manager_id: int | None = None) -> None:
-    await redis.delete(f"vehicle:{vehicle_id}")
-    await invalidate_pattern(redis, "vehicles:list:*")
-    await invalidate_pattern(redis, f"vehicle:availability:{vehicle_id}:*")
-    if manager_id is not None:
-        await redis.delete(f"stats:manager:{manager_id}")
-    await redis.delete("stats:admin")
+    try:
+        await redis.delete(f"vehicle:{vehicle_id}")
+        await invalidate_pattern(redis, "vehicles:list:*")
+        await invalidate_pattern(redis, f"vehicle:availability:{vehicle_id}:*")
+        if manager_id is not None:
+            await redis.delete(f"stats:manager:{manager_id}")
+        await redis.delete("stats:admin")
+    except RedisError as exc:
+        logger.warning(f"vehicle_cache_invalidate_failed vehicle_id={vehicle_id} error={exc}")
 
 
 async def _get_manager(db: AsyncSession, manager_id: int) -> User:
@@ -43,6 +47,28 @@ async def _get_manager(db: AsyncSession, manager_id: int) -> User:
     if manager is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Assigned manager was not found.")
     return manager
+
+
+async def _get_vehicle_with_images(db: AsyncSession, vehicle_id: int) -> Vehicle:
+    result = await db.execute(
+        select(Vehicle)
+        .where(Vehicle.id == vehicle_id)
+        .options(selectinload(Vehicle.images))
+    )
+    vehicle = result.scalar_one_or_none()
+    if vehicle is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
+    return vehicle
+
+
+async def _vehicle_has_active_booking(db: AsyncSession, vehicle_id: int) -> bool:
+    active_booking = await db.execute(
+        select(Booking.id).where(
+            Booking.vehicle_id == vehicle_id,
+            Booking.status.in_([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]),
+        )
+    )
+    return active_booking.scalar_one_or_none() is not None
 
 
 def _serialize_vehicle_detail(vehicle: Vehicle) -> dict:
@@ -98,6 +124,12 @@ async def list_vehicles(
             .where(VehicleImage.is_primary.is_(True))
             .subquery()
         )
+        active_booking_subquery = (
+            select(Booking.vehicle_id, func.count(Booking.id).label("active_booking_count"))
+            .where(Booking.status.in_([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]))
+            .group_by(Booking.vehicle_id)
+            .subquery()
+        )
 
         conditions = []
         if search:
@@ -138,9 +170,11 @@ async def list_vehicles(
                 Vehicle.seating_capacity,
                 Vehicle.availability_status,
                 Vehicle.created_at,
+                func.coalesce(active_booking_subquery.c.active_booking_count, 0).label("active_booking_count"),
                 primary_image_subquery.c.primary_image,
             )
             .outerjoin(primary_image_subquery, primary_image_subquery.c.vehicle_id == Vehicle.id)
+            .outerjoin(active_booking_subquery, active_booking_subquery.c.vehicle_id == Vehicle.id)
             .order_by(Vehicle.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
@@ -163,6 +197,7 @@ async def list_vehicles(
                 "fuel_type": row.fuel_type,
                 "seating_capacity": row.seating_capacity,
                 "availability_status": row.availability_status,
+                "has_active_booking": bool(row.active_booking_count),
                 "primary_image": row.primary_image,
                 "created_at": row.created_at,
             }
@@ -231,7 +266,7 @@ async def create_vehicle(db: AsyncSession, redis: Redis, payload: VehicleCreateR
 
     db.add(vehicle)
     await db.commit()
-    await db.refresh(vehicle)
+    vehicle = await _get_vehicle_with_images(db, vehicle.id)
     await invalidate_vehicle_cache(redis, vehicle.id, manager_id=vehicle.manager_id)
     logger.info(f"vehicle_created vehicle_id={vehicle.id} manager_id={vehicle.manager_id}")
     return vehicle
@@ -245,6 +280,8 @@ async def update_vehicle(db: AsyncSession, redis: Redis, vehicle_id: int, payloa
 
     if actor.role == UserRole.VEHICLE_MANAGER and vehicle.manager_id != actor.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only update your own vehicles.")
+    if await _vehicle_has_active_booking(db, vehicle.id):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vehicle has active or pending bookings and cannot be edited.")
 
     update_data = payload.model_dump(exclude_unset=True)
     if "registration_number" in update_data:
@@ -263,7 +300,7 @@ async def update_vehicle(db: AsyncSession, redis: Redis, vehicle_id: int, payloa
         setattr(vehicle, field, value)
 
     await db.commit()
-    await db.refresh(vehicle)
+    vehicle = await _get_vehicle_with_images(db, vehicle.id)
     await invalidate_vehicle_cache(redis, vehicle.id, manager_id=vehicle.manager_id)
     logger.info(f"vehicle_updated vehicle_id={vehicle.id} manager_id={vehicle.manager_id}")
     return vehicle
@@ -277,13 +314,7 @@ async def delete_vehicle(db: AsyncSession, redis: Redis, vehicle_id: int, actor:
     if actor.role == UserRole.VEHICLE_MANAGER and vehicle.manager_id != actor.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own vehicles.")
 
-    active_booking = await db.execute(
-        select(Booking.id).where(
-            Booking.vehicle_id == vehicle.id,
-            Booking.status.in_([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]),
-        )
-    )
-    if active_booking.scalar_one_or_none():
+    if await _vehicle_has_active_booking(db, vehicle.id):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vehicle has active or pending bookings and cannot be deleted.")
 
     manager_id = vehicle.manager_id

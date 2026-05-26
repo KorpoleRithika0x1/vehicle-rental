@@ -5,8 +5,9 @@ from fastapi import HTTPException, status
 
 def normalize_datetime(value: datetime) -> datetime:
     if value.tzinfo is not None:
-        return value.astimezone(UTC).replace(tzinfo=None)
-    return value
+        value = value.astimezone(UTC).replace(tzinfo=None)
+    # Normalize to start of day so date boundaries are compared correctly
+    return value.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def calculate_rental_days(pickup_date: datetime, return_date: datetime) -> int:

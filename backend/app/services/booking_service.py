@@ -24,12 +24,15 @@ ACTIVE_BOOKING_STATUSES = [BookingStatus.PENDING, BookingStatus.APPROVED, Bookin
 
 
 async def _invalidate_booking_cache(redis: Redis, booking: Booking) -> None:
-    await invalidate_pattern(redis, f"vehicle:availability:{booking.vehicle_id}:*")
-    await invalidate_pattern(redis, "vehicles:list:*")
-    await redis.delete(f"vehicle:{booking.vehicle_id}")
-    if booking.vehicle:
-        await redis.delete(f"stats:manager:{booking.vehicle.manager_id}")
-    await redis.delete("stats:admin")
+    try:
+        await invalidate_pattern(redis, f"vehicle:availability:{booking.vehicle_id}:*")
+        await invalidate_pattern(redis, "vehicles:list:*")
+        await redis.delete(f"vehicle:{booking.vehicle_id}")
+        if booking.vehicle:
+            await redis.delete(f"stats:manager:{booking.vehicle.manager_id}")
+        await redis.delete("stats:admin")
+    except Exception as exc:
+        logger.warning(f"booking_cache_invalidate_failed booking_id={booking.id} error={exc}")
 
 
 def _queue_notification(background_tasks: BackgroundTasks | None, event: str, booking: Booking) -> None:
@@ -76,6 +79,9 @@ async def create_booking(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Booking service is temporarily unavailable. Please try again.",
         ) from exc
+    except Exception as exc:
+        logger.warning(f"booking_lock_unavailable vehicle_id={vehicle_id} error={exc} — proceeding without lock")
+        acquired = True
 
     if not acquired:
         logger.warning(f"booking_lock_busy vehicle_id={vehicle_id}")
@@ -97,7 +103,7 @@ async def create_booking(
         if overlap.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Vehicle is not available for the selected dates.",
+                detail="Vehicle is not available for the selected dates. Please choose dates after the existing booking ends.",
             )
 
         vehicle_result = await db.execute(
@@ -129,18 +135,24 @@ async def create_booking(
         await db.refresh(booking)
         booking.vehicle = vehicle
 
-        await redis.delete(f"vehicle:{vehicle_id}")
-        await invalidate_pattern(redis, "vehicles:list:*")
-        await invalidate_pattern(redis, f"vehicle:availability:{vehicle_id}:*")
-        await redis.delete("stats:admin")
-        await redis.delete(f"stats:manager:{vehicle.manager_id}")
+        try:
+            await redis.delete(f"vehicle:{vehicle_id}")
+            await invalidate_pattern(redis, "vehicles:list:*")
+            await invalidate_pattern(redis, f"vehicle:availability:{vehicle_id}:*")
+            await redis.delete("stats:admin")
+            await redis.delete(f"stats:manager:{vehicle.manager_id}")
+        except Exception as exc:
+            logger.warning(f"booking_cache_invalidate_failed vehicle_id={vehicle_id} error={exc}")
         logger.info(f"booking_created booking_id={booking.id} vehicle_id={vehicle_id} customer_id={customer_id}")
         return booking
     finally:
-        stored = await redis.get(lock_key)
-        if stored and stored.decode() == lock_value:
-            await redis.delete(lock_key)
-            logger.info(f"booking_lock_released vehicle_id={vehicle_id} customer_id={customer_id}")
+        try:
+            stored = await redis.get(lock_key)
+            if stored and stored.decode() == lock_value:
+                await redis.delete(lock_key)
+                logger.info(f"booking_lock_released vehicle_id={vehicle_id} customer_id={customer_id}")
+        except Exception as exc:
+            logger.warning(f"booking_lock_release_failed vehicle_id={vehicle_id} error={exc}")
 
 
 async def list_bookings(

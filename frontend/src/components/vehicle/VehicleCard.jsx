@@ -1,65 +1,65 @@
-import { CarFront, Fuel, Users } from 'lucide-react';
+import { Car, Fuel, MapPin, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import Badge from '../common/Badge';
 import { formatCurrency } from '../../utils/formatCurrency';
 
-export default function VehicleCard({ vehicle, showManager = false }) {
+const vehicleTypeLabels = {
+  car: 'Sedan',
+  suv: 'SUV',
+  van: 'Van',
+  truck: 'Scooty',
+  bike: 'Bike',
+};
+
+export default function VehicleCard({ vehicle }) {
+  const typeLabel = vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type;
+
   return (
-    <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-soft transition hover:-translate-y-1">
-      <img
-        src={vehicle.primary_image || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80'}
-        alt={vehicle.vehicle_name}
-        className="h-56 w-full object-cover"
-        loading="lazy"
-      />
-      <div className="space-y-4 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="font-heading text-2xl text-ink">{vehicle.vehicle_name}</h3>
-            <p className="text-sm text-slate-500">{vehicle.brand}</p>
-          </div>
-          <Badge tone={vehicle.availability_status ? 'success' : 'danger'}>
-            {vehicle.availability_status ? 'Available' : 'Unavailable'}
-          </Badge>
+    <Link to={`/vehicles/${vehicle.id}`} className="block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+      {/* Image */}
+      <div className="relative">
+        <img
+          src={vehicle.primary_image || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80'}
+          alt={vehicle.vehicle_name}
+          className="h-52 w-full object-cover"
+          loading="lazy"
+        />
+        {/* Available badge */}
+        {vehicle.availability_status && (
+          <span className="absolute left-3 top-3 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white">
+            Available Now
+          </span>
+        )}
+        {/* Price overlay */}
+        <div className="absolute bottom-3 right-3 rounded-lg bg-black/60 px-3 py-1.5 text-sm font-bold text-white">
+          {formatCurrency(vehicle.rental_price_per_day)}<span className="text-xs font-normal"> / day</span>
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Badge tone="brand">{vehicle.vehicle_type}</Badge>
-          <Badge>{vehicle.fuel_type}</Badge>
-          {showManager && <Badge>Manager #{vehicle.manager_id}</Badge>}
-        </div>
+      {/* Info */}
+      <div className="p-4">
+        <h3 className="text-lg font-bold text-ink">{vehicle.vehicle_name}</h3>
+        <p className="mt-0.5 text-sm text-slate-400">{typeLabel} • {vehicle.brand}</p>
 
-        <div className="grid grid-cols-3 gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+        <div className="mt-4 grid grid-cols-2 gap-y-2 text-sm text-slate-500">
           <div className="flex items-center gap-2">
-            <CarFront className="h-4 w-4 text-brand" />
-            {vehicle.vehicle_type}
-          </div>
-          <div className="flex items-center gap-2">
-            <Fuel className="h-4 w-4 text-brand" />
-            {vehicle.fuel_type}
+            <Users className="h-4 w-4 text-slate-400" />
+            {vehicle.seating_capacity} Seats
           </div>
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-brand" />
-            {vehicle.seating_capacity} seats
+            <Fuel className="h-4 w-4 text-slate-400" />
+            <span className="capitalize">{vehicle.fuel_type}</span>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Daily Rate</p>
-            <p className="text-2xl font-semibold text-brand">{formatCurrency(vehicle.rental_price_per_day)}</p>
+          <div className="flex items-center gap-2">
+            <Car className="h-4 w-4 text-slate-400" />
+            <span className="capitalize">{typeLabel}</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link to={`/vehicles/${vehicle.id}`} className="rounded-full border border-brand/20 px-4 py-2 text-sm font-semibold text-brand">
-              View Details
-            </Link>
-            <Link to={`/vehicles/${vehicle.id}/book`} className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">
-              Book Now
-            </Link>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-slate-400" />
+            Available
           </div>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

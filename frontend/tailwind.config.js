@@ -11,8 +11,8 @@ export default {
         gold: '#d9a441',
       },
       fontFamily: {
-        heading: ['"Playfair Display"', 'serif'],
-        body: ['"DM Sans"', 'sans-serif'],
+        heading: ['"Inter"', 'sans-serif'],
+        body: ['"Inter"', 'sans-serif'],
       },
       boxShadow: {
         soft: '0 24px 60px rgba(22, 33, 62, 0.08)',

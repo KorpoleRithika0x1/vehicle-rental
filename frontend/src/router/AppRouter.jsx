@@ -19,6 +19,7 @@ const AdminDashboard = lazy(() => import('../pages/dashboard/AdminDashboard'));
 const ManagerVehicles = lazy(() => import('../pages/dashboard/ManagerVehicles'));
 const ManagerBookings = lazy(() => import('../pages/dashboard/ManagerBookings'));
 const AdminUsers = lazy(() => import('../pages/dashboard/AdminUsers'));
+const AdminManagers = lazy(() => import('../pages/dashboard/AdminManagers'));
 const Profile = lazy(() => import('../pages/Profile'));
 const Forbidden = lazy(() => import('../pages/Forbidden'));
 const NotFound = lazy(() => import('../pages/NotFound'));
@@ -81,6 +82,7 @@ export default function AppRouter() {
 
           <Route element={<RoleGuard roles={['vehicle_manager']} />}>
             <Route path="/dashboard/manager" element={<ManagerDashboard />} />
+            <Route path="/dashboard/manager/vehicles/add" element={<ManagerVehicles />} />
             <Route path="/dashboard/manager/vehicles" element={<ManagerVehicles />} />
             <Route path="/dashboard/manager/bookings" element={<ManagerBookings />} />
           </Route>
@@ -88,6 +90,7 @@ export default function AppRouter() {
           <Route element={<RoleGuard roles={['admin']} />}>
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
             <Route path="/dashboard/admin/users" element={<AdminUsers />} />
+            <Route path="/dashboard/admin/managers" element={<AdminManagers />} />
           </Route>
         </Route>
 

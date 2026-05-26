@@ -13,6 +13,10 @@ class MessageResponse(BaseModel):
     detail: dict | None = None
 
 
+class ImageUploadResponse(BaseModel):
+    image_url: str
+
+
 class ErrorResponse(BaseModel):
     error: bool = True
     message: str

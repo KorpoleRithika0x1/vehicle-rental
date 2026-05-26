@@ -43,3 +43,12 @@ export async function addVehicleImage(id, payload) {
   const { data } = await apiClient.post(`/vehicles/${id}/images`, payload);
   return data;
 }
+
+export async function uploadVehicleImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await apiClient.post('/vehicles/images/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}

@@ -66,6 +66,7 @@ class VehicleListItem(BaseModel):
     fuel_type: FuelType
     seating_capacity: int
     availability_status: bool
+    has_active_booking: bool = False
     primary_image: str | None = None
     created_at: datetime
 

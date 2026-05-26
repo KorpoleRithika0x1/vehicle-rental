@@ -28,7 +28,9 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       const response = await login(form);
-      const redirectPath = location.state?.from?.pathname || ROLE_DASHBOARD_PATHS[response.user.role];
+      const role = response.user.role;
+      const defaultPath = role === 'customer' ? '/' : ROLE_DASHBOARD_PATHS[role];
+      const redirectPath = location.state?.from?.pathname || defaultPath;
       navigate(redirectPath, { replace: true });
     } catch (error) {
       setErrors({ general: error.normalizedMessage });

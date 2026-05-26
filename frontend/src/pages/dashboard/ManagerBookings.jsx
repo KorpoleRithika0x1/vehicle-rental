@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import BookingTable from '../../components/dashboard/BookingTable';
 import Loader from '../../components/common/Loader';
+import DashboardShell from '../../components/dashboard/DashboardShell';
 import { useBooking } from '../../hooks/useBooking';
 
 export default function ManagerBookings() {
@@ -31,11 +32,16 @@ export default function ManagerBookings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Manager Bookings</p>
-        <h1 className="mt-4 font-heading text-5xl text-ink">Approve, reject, and complete reservations.</h1>
-      </div>
+    <DashboardShell
+      title="Manage Bookings"
+      subtitle="View bookings for your vehicles and approve, reject, or complete rental requests."
+      links={[
+        { label: 'Dashboard', to: '/dashboard/manager', end: true },
+        { label: 'Add Car', to: '/dashboard/manager/vehicles/add', end: true },
+        { label: 'Manage Cars', to: '/dashboard/manager/vehicles', end: true },
+        { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
+      ]}
+    >
       <BookingTable
         bookings={bookings}
         actions={(booking) => (
@@ -58,6 +64,6 @@ export default function ManagerBookings() {
           </div>
         )}
       />
-    </div>
+    </DashboardShell>
   );
 }
