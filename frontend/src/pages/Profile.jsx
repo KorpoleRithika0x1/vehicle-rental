@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { uploadProfileImage } from '../api/auth';
+import { uploadProfileImage, uploadLicenseDocument } from '../api/auth';
 import Loader from '../components/common/Loader';
 import { useAuth } from '../hooks/useAuth';
 import { validatePhone } from '../utils/validators';
@@ -13,6 +13,11 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  const [licenseForm, setLicenseForm] = useState({ license_number: '', license_document_url: '' });
+  const [licenseError, setLicenseError] = useState('');
+  const [isLicenseSubmitting, setIsLicenseSubmitting] = useState(false);
+  const [isUploadingLicense, setIsUploadingLicense] = useState(false);
+
   useEffect(() => {
     let ignore = false;
     async function loadProfile() {
@@ -20,7 +25,15 @@ export default function Profile() {
       try {
         const profile = user || (await hydrateProfile());
         if (!ignore) {
-          setForm({ name: profile.name, phone_number: profile.phone_number || '', profile_image_url: profile.profile_image_url || '' });
+          setForm({
+            name: profile.name,
+            phone_number: profile.phone_number || '',
+            profile_image_url: profile.profile_image_url || ''
+          });
+          setLicenseForm({
+            license_number: profile.license_number || profile.driving_license_number || '',
+            license_document_url: profile.license_document_url || ''
+          });
         }
       } finally {
         if (!ignore) setIsLoading(false);
@@ -66,12 +79,60 @@ export default function Profile() {
     }
   }
 
+  async function handleLicenseSubmit(event) {
+    event.preventDefault();
+    if (!licenseForm.license_number || !licenseForm.license_number.trim()) {
+      setLicenseError('License number is required.');
+      return;
+    }
+    setLicenseError('');
+    setIsLicenseSubmitting(true);
+    try {
+      await updateProfile({
+        license_number: licenseForm.license_number,
+        license_document_url: licenseForm.license_document_url || undefined,
+      });
+    } catch (requestError) {
+      setLicenseError(requestError.normalizedMessage || 'Failed to update license info.');
+    } finally {
+      setIsLicenseSubmitting(false);
+    }
+  }
+
+  async function handleLicenseDocumentChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLicenseError('');
+    setIsUploadingLicense(true);
+    try {
+      const response = await uploadLicenseDocument(file);
+      setLicenseForm((current) => ({ ...current, license_document_url: response.image_url }));
+      await hydrateProfile();
+    } catch (requestError) {
+      setLicenseError(requestError.normalizedMessage || 'Failed to upload document.');
+    } finally {
+      setIsUploadingLicense(false);
+      event.target.value = '';
+    }
+  }
+
   if (isLoading) {
     return <Loader label="Loading profile..." fullScreen />;
   }
 
+  let statusText = 'Not Submitted';
+  let badgeColor = 'bg-slate-100 text-slate-700';
+  if (user?.license_verified) {
+    statusText = 'Verified';
+    badgeColor = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+  } else if (user?.license_document_url) {
+    statusText = 'Under Review';
+    badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200';
+  }
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6 lg:px-8 space-y-8">
+      {/* Account Details Card */}
       <div className="glass-panel p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Profile</p>
         <h1 className="mt-4 font-heading text-5xl text-ink">Keep your account details current.</h1>
@@ -109,6 +170,60 @@ export default function Profile() {
           </button>
         </form>
       </div>
+
+      {/* Driving License Card */}
+      {user?.role === 'customer' && (
+        <div className="glass-panel p-8">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Verification</p>
+              <h2 className="mt-2 font-heading text-3xl text-ink">Driving License</h2>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${badgeColor}`}>
+              {statusText}
+            </span>
+          </div>
+
+          <form onSubmit={handleLicenseSubmit} className="mt-6 space-y-5">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-600">License number</label>
+              <input
+                value={licenseForm.license_number}
+                onChange={(event) => setLicenseForm((current) => ({ ...current, license_number: event.target.value }))}
+                placeholder="e.g. DL-12345678"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-600">License document</label>
+              <div className="flex items-center gap-4">
+                {licenseForm.license_document_url ? (
+                  <a
+                    href={licenseForm.license_document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-semibold text-brand hover:bg-slate-200"
+                  >
+                    View uploaded document
+                  </a>
+                ) : (
+                  <div className="text-sm text-slate-400">No document uploaded yet.</div>
+                )}
+                <label className="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">
+                  {isUploadingLicense ? 'Uploading...' : 'Upload document'}
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleLicenseDocumentChange} disabled={isUploadingLicense} />
+                </label>
+              </div>
+            </div>
+
+            {licenseError ? <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{licenseError}</div> : null}
+            <button type="submit" disabled={isLicenseSubmitting} className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white">
+              {isLicenseSubmitting ? 'Saving...' : 'Save license info'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@ const ManagerVehicles = lazy(() => import('../pages/dashboard/ManagerVehicles'))
 const ManagerBookings = lazy(() => import('../pages/dashboard/ManagerBookings'));
 const AdminUsers = lazy(() => import('../pages/dashboard/AdminUsers'));
 const AdminManagers = lazy(() => import('../pages/dashboard/AdminManagers'));
+const AdminLicenses = lazy(() => import('../pages/dashboard/AdminLicenses'));
 const Profile = lazy(() => import('../pages/Profile'));
 const Forbidden = lazy(() => import('../pages/Forbidden'));
 const NotFound = lazy(() => import('../pages/NotFound'));
@@ -91,6 +92,7 @@ export default function AppRouter() {
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
             <Route path="/dashboard/admin/users" element={<AdminUsers />} />
             <Route path="/dashboard/admin/managers" element={<AdminManagers />} />
+            <Route path="/dashboard/admin/licenses" element={<AdminLicenses />} />
           </Route>
         </Route>
 

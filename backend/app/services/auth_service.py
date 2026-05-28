@@ -62,6 +62,8 @@ async def authenticate_user(db: AsyncSession, payload: LoginRequest) -> TokenRes
 
 async def update_profile(db: AsyncSession, user: User, payload: ProfileUpdateRequest) -> User:
     update_data = payload.model_dump(exclude_unset=True)
+    if "license_number" in update_data or "license_document_url" in update_data:
+        user.license_verified = False
     for field, value in update_data.items():
         setattr(user, field, value)
     await db.commit()

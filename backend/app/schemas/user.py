@@ -37,6 +37,8 @@ class ProfileUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
     phone_number: str | None = Field(default=None, max_length=20)
     profile_image_url: HttpUrl | None = None
+    license_number: str | None = Field(default=None, max_length=50)
+    license_document_url: str | None = Field(default=None, max_length=500)
 
     @field_validator("phone_number")
     @classmethod
@@ -64,6 +66,10 @@ class UserResponse(ORMBaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    driving_license_number: str | None = None
+    license_verified: bool = False
+    license_document_url: str | None = None
+    license_number: str | None = None
 
 
 class TokenResponse(BaseModel):

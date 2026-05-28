@@ -27,6 +27,18 @@ class User(Base):
     )
     profile_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     phone_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    driving_license_number: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    license_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("0"), default=False)
+    license_document_url: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
+
+    @property
+    def license_number(self) -> str | None:
+        return self.driving_license_number
+
+    @license_number.setter
+    def license_number(self, value: str | None) -> None:
+        self.driving_license_number = value
+
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"), default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

@@ -52,6 +52,16 @@ async def create_booking(
     pickup_date,
     return_date,
 ) -> Booking:
+    customer_result = await db.execute(select(User).where(User.id == customer_id))
+    customer = customer_result.scalar_one_or_none()
+    if customer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found.")
+    if not customer.license_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your driving license must be verified before booking.",
+        )
+
     pickup_date, return_date = validate_booking_dates(pickup_date, return_date)
     lock_key = f"booking_lock:vehicle:{vehicle_id}"
     lock_value = str(uuid.uuid4())

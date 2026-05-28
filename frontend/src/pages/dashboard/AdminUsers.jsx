@@ -47,6 +47,7 @@ export default function AdminUsers() {
         { label: 'Dashboard', to: '/dashboard/admin', end: true },
         { label: 'Manage Users', to: '/dashboard/admin/users' },
         { label: 'Manage Managers', to: '/dashboard/admin/managers' },
+        { label: 'License Verifications', to: '/dashboard/admin/licenses' },
       ]}
     >
       <div className="space-y-4">

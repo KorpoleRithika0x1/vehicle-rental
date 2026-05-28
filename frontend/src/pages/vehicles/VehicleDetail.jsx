@@ -198,13 +198,22 @@ export default function VehicleDetail() {
                 </div>
 
                 {error && <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl bg-brand py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
-                >
-                  {isSubmitting ? 'Booking...' : 'Book Now'}
-                </button>
+                {user?.license_verified ? (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full rounded-xl bg-brand py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                  >
+                    {isSubmitting ? 'Booking...' : 'Book Now'}
+                  </button>
+                ) : (
+                  <Link
+                    to="/profile"
+                    className="block w-full rounded-xl bg-amber-500 py-3 text-center text-sm font-bold text-white transition hover:bg-amber-600 shadow-md"
+                  >
+                    Verify your driving license to rent → Go to Profile
+                  </Link>
+                )}
                 <p className="text-center text-xs text-slate-400">No credit card required to reserve</p>
                 <div className="rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
                   <span className="font-semibold text-slate-600">Deposit at pick-up: </span>

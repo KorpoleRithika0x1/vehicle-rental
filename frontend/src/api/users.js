@@ -19,3 +19,8 @@ export async function updateUserStatus(id, payload) {
   const { data } = await apiClient.put(`/users/${id}/status`, payload);
   return data;
 }
+
+export async function verifyUserLicense(id) {
+  const { data } = await apiClient.put(`/users/${id}/verify-license`);
+  return data;
+}

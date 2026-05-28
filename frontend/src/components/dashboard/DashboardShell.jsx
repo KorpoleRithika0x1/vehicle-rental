@@ -1,4 +1,4 @@
-import { BarChart2, Car, ClipboardList, LayoutDashboard, LogOut, Pencil, PlusSquare, Users } from 'lucide-react';
+import { BarChart2, Car, ClipboardList, LayoutDashboard, LogOut, Pencil, PlusSquare, ShieldCheck, Users } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 
@@ -9,6 +9,7 @@ const LINK_ICONS = {
   '/dashboard/admin':            LayoutDashboard,
   '/dashboard/admin/users':      Users,
   '/dashboard/admin/managers':   Users,
+  '/dashboard/admin/licenses':   ShieldCheck,
   '/dashboard/manager':          LayoutDashboard,
   '/dashboard/manager/vehicles/add': PlusSquare,
   '/dashboard/manager/vehicles': Car,

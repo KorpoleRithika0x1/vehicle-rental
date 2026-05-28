@@ -69,6 +69,20 @@ async def upload_profile_image(
     return ImageUploadResponse(image_url=image_url)
 
 
+@router.post("/profile/license-document", response_model=ImageUploadResponse)
+async def upload_license_document(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> ImageUploadResponse:
+    url = await upload_image_to_cloudinary(file, folder="vehicle-rental/licenses")
+    current_user.license_document_url = url
+    current_user.license_verified = False
+    await db.commit()
+    await db.refresh(current_user)
+    return ImageUploadResponse(image_url=url)
+
+
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     payload: RefreshTokenRequest,

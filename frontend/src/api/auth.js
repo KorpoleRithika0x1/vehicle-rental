@@ -28,3 +28,12 @@ export async function uploadProfileImage(file) {
   });
   return data;
 }
+
+export async function uploadLicenseDocument(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await apiClient.post('/auth/profile/license-document', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}

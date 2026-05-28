@@ -39,7 +39,7 @@ export default function Home() {
   return (
     <div>
       <section
-        className="relative overflow-hidden"
+        className="relative overflow-hidden z-0"
         style={{
           backgroundImage:
             'linear-gradient(135deg, rgba(17,24,39,0.8), rgba(22,33,62,0.58)), url(https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1800&q=80)',
@@ -118,21 +118,23 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto -mt-10 max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <section className="relative z-10 bg-gray-50 mt-14 pt-4 pb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-6 max-w-6xl mx-auto">
           {USP_ITEMS.map((item, index) => {
             const Icon = item.icon;
             return (
               <div
                 key={item.title}
-                className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft"
+                className="flex flex-col h-full bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white">
-                  <Icon className="h-6 w-6" />
+                <div className="mb-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white">
+                    <Icon className="h-6 w-6" />
+                  </div>
                 </div>
-                <h3 className="mt-5 font-heading text-2xl text-ink">{item.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-500">{item.description}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-500 flex-grow leading-relaxed">{item.description}</p>
               </div>
             );
           })}

@@ -15,6 +15,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/", response_model=PaginatedResponse[UserResponse])
 async def get_users(
     search: str | None = None,
+    pending_licenses: bool = Query(default=False),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=12, ge=1, le=50),
     db: AsyncSession = Depends(get_session),
@@ -26,6 +27,10 @@ async def get_users(
         search_term = f"%{search.strip()}%"
         query = query.where(User.name.ilike(search_term) | User.email.ilike(search_term))
         count_query = count_query.where(User.name.ilike(search_term) | User.email.ilike(search_term))
+
+    if pending_licenses:
+        query = query.where(User.license_document_url.isnot(None), User.license_verified == False)
+        count_query = count_query.where(User.license_document_url.isnot(None), User.license_verified == False)
 
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
@@ -100,6 +105,26 @@ async def update_user_status(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin cannot block their own account.")
 
     user.is_active = payload.is_active
+    await db.commit()
+    await db.refresh(user)
+    return UserResponse.model_validate(user)
+
+
+@router.put("/{user_id}/verify-license", response_model=UserResponse)
+async def verify_user_license(
+    user_id: int,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.VEHICLE_MANAGER)),
+) -> UserResponse:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    user.license_verified = True
+
+    from loguru import logger
+    logger.info(f"license_verified_success actor_id={current_user.id} actor_role={current_user.role.value} target_user_id={user.id}")
+
     await db.commit()
     await db.refresh(user)
     return UserResponse.model_validate(user)
