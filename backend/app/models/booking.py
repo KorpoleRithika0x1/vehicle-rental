@@ -31,7 +31,7 @@ class Booking(Base):
     return_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[BookingStatus] = mapped_column(
-        SqlEnum(BookingStatus, name="booking_status"),
+        SqlEnum(BookingStatus, name="booking_status", values_callable=lambda enum: [item.value for item in enum]),
         nullable=False,
         server_default=BookingStatus.PENDING.value,
     )

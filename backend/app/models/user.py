@@ -21,7 +21,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
-        SqlEnum(UserRole, name="user_role"),
+        SqlEnum(UserRole, name="user_role", values_callable=lambda enum: [item.value for item in enum]),
         nullable=False,
         server_default=UserRole.CUSTOMER.value,
     )
