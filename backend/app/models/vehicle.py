@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, ForeignKey, Index, Numeric, String, Text, func, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum as SqlEnum, ForeignKey, Index, Numeric, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -26,6 +26,7 @@ class Vehicle(Base):
     __tablename__ = "vehicles"
     __table_args__ = (
         Index("idx_vehicles_availability_type_brand", "availability_status", "vehicle_type", "brand"),
+        CheckConstraint("vehicle_count >= 0", name="ck_vehicles_vehicle_count_non_negative"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -44,6 +45,7 @@ class Vehicle(Base):
         nullable=False,
     )
     seating_capacity: Mapped[int] = mapped_column(nullable=False)
+    vehicle_count: Mapped[int] = mapped_column(nullable=False, server_default=text("1"), default=1)
     availability_status: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"), default=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())

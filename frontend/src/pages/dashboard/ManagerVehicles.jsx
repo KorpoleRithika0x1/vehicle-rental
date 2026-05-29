@@ -16,6 +16,7 @@ const initialForm = {
   rental_price_per_day: '',
   fuel_type: 'petrol',
   seating_capacity: '',
+  vehicle_count: 1,
   availability_status: true,
   description: '',
   image_url: '',
@@ -31,6 +32,13 @@ const vehicleTypeOptions = [
 
 function formatVehicleType(type) {
   return vehicleTypeOptions.find((option) => option.value === type)?.label || type;
+}
+
+function getStockBadge(vehicle) {
+  const count = Number(vehicle.vehicle_count ?? 0);
+  if (!vehicle.availability_status || count === 0) return { label: 'Out of Stock', className: 'bg-rose-100 text-rose-700' };
+  if (count === 1) return { label: 'Low Stock', className: 'bg-amber-100 text-amber-700' };
+  return { label: 'Available', className: 'bg-emerald-100 text-emerald-700' };
 }
 
 function EditModal({ form, setForm, onSubmit, onClose, isSaving, isUploadingImage, onImageUpload, error }) {
@@ -56,6 +64,7 @@ function EditModal({ form, setForm, onSubmit, onClose, isSaving, isUploadingImag
             </select>
             <input value={form.rental_price_per_day} type="number" required onChange={(e) => setForm((c) => ({ ...c, rental_price_per_day: e.target.value }))} placeholder="Price per day" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
             <input value={form.seating_capacity} type="number" required onChange={(e) => setForm((c) => ({ ...c, seating_capacity: e.target.value }))} placeholder="Seating capacity" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
+            <input value={form.vehicle_count} type="number" min="0" required onChange={(e) => setForm((c) => ({ ...c, vehicle_count: e.target.value }))} placeholder="Vehicle count" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
             <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600">
               <input type="checkbox" checked={form.availability_status} onChange={(e) => setForm((c) => ({ ...c, availability_status: e.target.checked }))} />
               Available for booking
@@ -97,6 +106,8 @@ export default function ManagerVehicles() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [stockDrafts, setStockDrafts] = useState({});
+  const [savingStockId, setSavingStockId] = useState(null);
   const [error, setError] = useState('');
   const showToast = useUiStore((state) => state.showToast);
 
@@ -108,6 +119,7 @@ export default function ManagerVehicles() {
     try {
       const response = await fetchVehicles({ page: 1, page_size: 50 });
       setVehicles(response.items);
+      setStockDrafts(Object.fromEntries(response.items.map((vehicle) => [vehicle.id, String(vehicle.vehicle_count ?? 0)])));
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +139,7 @@ export default function ManagerVehicles() {
       rental_price_per_day: vehicle.rental_price_per_day,
       fuel_type: vehicle.fuel_type,
       seating_capacity: vehicle.seating_capacity,
+      vehicle_count: vehicle.vehicle_count ?? 1,
       availability_status: vehicle.availability_status,
       description: vehicle.description || '',
       image_url: vehicle.primary_image || '',
@@ -147,6 +160,7 @@ export default function ManagerVehicles() {
       rental_price_per_day: vehicle.rental_price_per_day,
       fuel_type: vehicle.fuel_type,
       seating_capacity: vehicle.seating_capacity,
+      vehicle_count: vehicle.vehicle_count ?? 1,
       availability_status: vehicle.availability_status,
       description: vehicle.description || '',
       image_url: vehicle.primary_image || '',
@@ -168,6 +182,7 @@ export default function ManagerVehicles() {
       ...rest,
       rental_price_per_day: Number(rest.rental_price_per_day),
       seating_capacity: Number(rest.seating_capacity),
+      vehicle_count: Number(rest.vehicle_count),
     };
 
     try {
@@ -202,6 +217,24 @@ export default function ManagerVehicles() {
       await loadVehicles();
     } catch (requestError) {
       showToast({ type: 'error', message: requestError?.normalizedMessage || 'Failed to delete vehicle.' });
+    }
+  }
+
+  async function handleStockSave(vehicle) {
+    const nextCount = Number(stockDrafts[vehicle.id]);
+    if (!Number.isInteger(nextCount) || nextCount < 0) {
+      showToast({ type: 'error', message: 'Vehicle count must be a whole number 0 or greater.' });
+      return;
+    }
+    setSavingStockId(vehicle.id);
+    try {
+      await updateVehicle(vehicle.id, { vehicle_count: nextCount });
+      showToast({ type: 'success', message: 'Stock count updated.' });
+      await loadVehicles();
+    } catch (requestError) {
+      showToast({ type: 'error', message: requestError?.normalizedMessage || 'Failed to update stock count.' });
+    } finally {
+      setSavingStockId(null);
     }
   }
 
@@ -270,6 +303,7 @@ export default function ManagerVehicles() {
             </select>
             <input value={form.rental_price_per_day} type="number" required onChange={(e) => setForm((c) => ({ ...c, rental_price_per_day: e.target.value }))} placeholder="Price per day" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
             <input value={form.seating_capacity} type="number" required onChange={(e) => setForm((c) => ({ ...c, seating_capacity: e.target.value }))} placeholder="Seating capacity" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
+            <input value={form.vehicle_count} type="number" min="0" required onChange={(e) => setForm((c) => ({ ...c, vehicle_count: e.target.value }))} placeholder="Vehicle count" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
             <label className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600">
               <input type="checkbox" checked={form.availability_status} onChange={(e) => setForm((c) => ({ ...c, availability_status: e.target.checked }))} />
               Available for booking
@@ -298,7 +332,10 @@ export default function ManagerVehicles() {
       {/* Vehicle list */}
       {!isAddCarPage ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {ownVehicles.map((vehicle) => (
+          {ownVehicles.map((vehicle) => {
+            const stockBadge = getStockBadge(vehicle);
+            const draftCount = stockDrafts[vehicle.id] ?? String(vehicle.vehicle_count ?? 0);
+            return (
             <div key={vehicle.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="aspect-[16/9] bg-slate-100">
                 {vehicle.primary_image ? (
@@ -313,8 +350,8 @@ export default function ManagerVehicles() {
                     <h3 className="truncate font-heading text-base text-ink">{vehicle.vehicle_name}</h3>
                     <p className="text-xs text-slate-500">{vehicle.brand} · {formatVehicleType(vehicle.vehicle_type)}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${vehicle.has_active_booking ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                    {vehicle.has_active_booking ? 'Rented' : 'Free'}
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${stockBadge.className}`}>
+                    {stockBadge.label}
                   </span>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs text-slate-500">
@@ -322,6 +359,26 @@ export default function ManagerVehicles() {
                   <span className="text-right font-medium text-slate-700">${vehicle.rental_price_per_day}/day</span>
                   <span className="capitalize">{vehicle.fuel_type}</span>
                   <span className="text-right">{vehicle.seating_capacity} seats</span>
+                </div>
+                <div className="mt-3 rounded-xl border border-slate-200 p-2">
+                  <label className="mb-1 block text-xs font-semibold text-slate-500">Stock count</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={draftCount}
+                      onChange={(event) => setStockDrafts((current) => ({ ...current, [vehicle.id]: event.target.value }))}
+                      className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleStockSave(vehicle)}
+                      disabled={savingStockId === vehicle.id || Number(draftCount) === Number(vehicle.vehicle_count ?? 0)}
+                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {savingStockId === vehicle.id ? 'Saving' : 'Save'}
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-3 flex gap-2">
                   <button type="button" disabled={vehicle.has_active_booking} onClick={() => handleEdit(vehicle)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">
@@ -335,7 +392,8 @@ export default function ManagerVehicles() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : null}
     </DashboardShell>

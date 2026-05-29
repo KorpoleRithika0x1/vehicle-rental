@@ -26,6 +26,7 @@ class VehicleBase(BaseModel):
     rental_price_per_day: Decimal = Field(gt=0)
     fuel_type: FuelType
     seating_capacity: int = Field(ge=1, le=50)
+    vehicle_count: int = Field(default=1, ge=0)
     availability_status: bool = True
     description: str | None = None
 
@@ -51,6 +52,7 @@ class VehicleUpdateRequest(BaseModel):
     rental_price_per_day: Decimal | None = Field(default=None, gt=0)
     fuel_type: FuelType | None = None
     seating_capacity: int | None = Field(default=None, ge=1, le=50)
+    vehicle_count: int | None = Field(default=None, ge=0)
     availability_status: bool | None = None
     description: str | None = None
 
@@ -65,6 +67,7 @@ class VehicleListItem(BaseModel):
     rental_price_per_day: Decimal
     fuel_type: FuelType
     seating_capacity: int
+    vehicle_count: int
     availability_status: bool
     has_active_booking: bool = False
     primary_image: str | None = None
@@ -81,6 +84,7 @@ class VehicleResponse(ORMBaseModel):
     rental_price_per_day: Decimal
     fuel_type: FuelType
     seating_capacity: int
+    vehicle_count: int
     availability_status: bool
     description: str | None = None
     created_at: datetime

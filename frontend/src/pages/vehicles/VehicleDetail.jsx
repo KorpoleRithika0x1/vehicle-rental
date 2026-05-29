@@ -46,7 +46,14 @@ export default function VehicleDetail() {
 
   const v = selectedVehicle;
   const typeLabel = vehicleTypeLabels[v.vehicle_type] || v.vehicle_type;
-  const canBook = isAuthenticated && user?.role === 'customer' && v.availability_status;
+  const stockCount = Number(v.vehicle_count ?? 0);
+  const isOutOfStock = !v.availability_status || stockCount === 0;
+  const stockBadge = isOutOfStock
+    ? { label: 'Out of Stock', className: 'bg-rose-100 text-rose-700' }
+    : stockCount === 1
+      ? { label: 'Low Stock — 1 left', className: 'bg-amber-100 text-amber-700' }
+      : { label: 'Available', className: 'bg-emerald-100 text-emerald-700' };
+  const canBook = isAuthenticated && user?.role === 'customer' && !isOutOfStock;
   const addonDailyTotal = ADDONS.reduce((sum, a) => sum + (addons[a.key] ? a.price : 0), 0);
   const totalDailyRate = Number(v.rental_price_per_day || 0) + addonDailyTotal;
 
@@ -108,7 +115,7 @@ export default function VehicleDetail() {
               { icon: Users, label: `${v.seating_capacity} Seats` },
               { icon: Fuel, label: v.fuel_type.charAt(0).toUpperCase() + v.fuel_type.slice(1) },
               { icon: Car, label: typeLabel },
-              { icon: MapPin, label: 'Available' },
+              { icon: MapPin, label: isOutOfStock ? 'Out of stock' : `${stockCount} in stock` },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex flex-col items-center gap-2 rounded-xl bg-slate-100 py-4 text-sm font-semibold text-slate-700">
                 <Icon className="h-5 w-5 text-slate-600" strokeWidth={2.5} />
@@ -151,6 +158,12 @@ export default function VehicleDetail() {
             <div className="flex items-baseline justify-between border-b border-slate-100 pb-4">
               <span className="text-3xl font-bold text-ink">{formatCurrency(totalDailyRate)}</span>
               <span className="text-sm text-slate-400">per day</span>
+            </div>
+            <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+              <span className="text-sm font-medium text-slate-600">Stock</span>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${stockBadge.className}`}>
+                {stockBadge.label}
+              </span>
             </div>
 
             {canBook ? (
@@ -231,7 +244,7 @@ export default function VehicleDetail() {
                   </>
                 ) : (
                   <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    {!v.availability_status ? 'This vehicle is currently unavailable.' : 'Only customers can book vehicles.'}
+                    {isOutOfStock ? 'This vehicle is currently out of stock.' : 'Only customers can book vehicles.'}
                   </p>
                 )}
               </div>

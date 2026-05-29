@@ -82,6 +82,7 @@ async def seed_vehicles(session, users_by_email):
             rental_price_per_day=price,
             fuel_type=fuel_type,
             seating_capacity=seats,
+            vehicle_count=3 if index % 3 == 0 else 1,
             availability_status=True,
             description=description,
         )
