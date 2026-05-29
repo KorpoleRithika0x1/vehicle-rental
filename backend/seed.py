@@ -82,6 +82,7 @@ async def seed_vehicles(session, users_by_email):
             rental_price_per_day=price,
             fuel_type=fuel_type,
             seating_capacity=seats,
+            vehicle_count=3 if index % 3 == 0 else 1,
             availability_status=True,
             description=description,
         )
@@ -129,14 +130,17 @@ async def seed_bookings(session, users_by_email):
 
 
 async def main():
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
 
-    async with AsyncSessionLocal() as session:
-        users_by_email = await seed_users(session)
-        await seed_vehicles(session, users_by_email)
-        await seed_bookings(session, users_by_email)
-        print("Seed data created successfully.")
+        async with AsyncSessionLocal() as session:
+            users_by_email = await seed_users(session)
+            await seed_vehicles(session, users_by_email)
+            await seed_bookings(session, users_by_email)
+            print("Seed data created successfully.")
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":

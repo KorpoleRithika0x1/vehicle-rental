@@ -30,6 +30,8 @@ export default function BookingForm({ vehicle, availability, disabled = false })
   }, [pickupDate, returnDate]);
 
   const totalPrice = useMemo(() => totalDays * Number(vehicle.rental_price_per_day || 0), [totalDays, vehicle.rental_price_per_day]);
+  const stockCount = Number(vehicle.vehicle_count ?? 0);
+  const isOutOfStock = !vehicle.availability_status || stockCount === 0;
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -74,6 +76,12 @@ export default function BookingForm({ vehicle, availability, disabled = false })
       />
 
       <div className="rounded-2xl bg-slate-50 p-4">
+        <div className="mb-3 flex items-center justify-between text-sm text-slate-500">
+          <span>Stock</span>
+          <span className={isOutOfStock ? 'font-semibold text-rose-600' : stockCount === 1 ? 'font-semibold text-amber-600' : 'font-semibold text-emerald-600'}>
+            {isOutOfStock ? 'Out of stock' : stockCount === 1 ? 'Low stock — 1 left' : `${stockCount} available`}
+          </span>
+        </div>
         <div className="flex items-center justify-between text-sm text-slate-500">
           <span>Price per day</span>
           <span>{formatCurrency(vehicle.rental_price_per_day)}</span>
@@ -97,10 +105,10 @@ export default function BookingForm({ vehicle, availability, disabled = false })
 
       <button
         type="submit"
-        disabled={disabled || isSubmitting}
+        disabled={disabled || isSubmitting || isOutOfStock}
         className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? 'Submitting booking...' : 'Confirm Booking'}
+        {isOutOfStock ? 'Out of Stock' : isSubmitting ? 'Submitting booking...' : 'Confirm Booking'}
       </button>
     </form>
   );

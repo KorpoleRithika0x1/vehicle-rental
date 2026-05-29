@@ -31,9 +31,10 @@ settings = get_settings()
 
 async def invalidate_vehicle_cache(redis: Redis, vehicle_id: int, manager_id: int | None = None) -> None:
     try:
-        await redis.delete(f"vehicle:{vehicle_id}")
+        await redis.delete(f"vehicle:{vehicle_id}", f"vehicle:v2:{vehicle_id}")
         await invalidate_pattern(redis, "vehicles:list:*")
         await invalidate_pattern(redis, f"vehicle:availability:{vehicle_id}:*")
+        await invalidate_pattern(redis, f"vehicle:availability:v2:{vehicle_id}:*")
         if manager_id is not None:
             await redis.delete(f"stats:manager:{manager_id}")
         await redis.delete("stats:admin")
@@ -82,6 +83,7 @@ def _serialize_vehicle_detail(vehicle: Vehicle) -> dict:
         rental_price_per_day=vehicle.rental_price_per_day,
         fuel_type=vehicle.fuel_type,
         seating_capacity=vehicle.seating_capacity,
+        vehicle_count=vehicle.vehicle_count,
         availability_status=vehicle.availability_status,
         description=vehicle.description,
         created_at=vehicle.created_at,
@@ -116,7 +118,7 @@ async def list_vehicles(
         "available_only": available_only,
         "page_size": page_size,
     }
-    cache_key = f"vehicles:list:{page}:{filters_hash(filters)}"
+    cache_key = f"vehicles:list:v2:{page}:{filters_hash(filters)}"
 
     async def fetch() -> dict:
         primary_image_subquery = (
@@ -154,6 +156,7 @@ async def list_vehicles(
             conditions.append(Vehicle.rental_price_per_day <= max_price)
         if available_only:
             conditions.append(Vehicle.availability_status.is_(True))
+            conditions.append(Vehicle.vehicle_count > 0)
 
         base_filters = and_(*conditions) if conditions else None
         count_query = select(func.count(Vehicle.id))
@@ -168,6 +171,7 @@ async def list_vehicles(
                 Vehicle.rental_price_per_day,
                 Vehicle.fuel_type,
                 Vehicle.seating_capacity,
+                Vehicle.vehicle_count,
                 Vehicle.availability_status,
                 Vehicle.created_at,
                 func.coalesce(active_booking_subquery.c.active_booking_count, 0).label("active_booking_count"),
@@ -196,6 +200,7 @@ async def list_vehicles(
                 "rental_price_per_day": row.rental_price_per_day,
                 "fuel_type": row.fuel_type,
                 "seating_capacity": row.seating_capacity,
+                "vehicle_count": row.vehicle_count,
                 "availability_status": row.availability_status,
                 "has_active_booking": bool(row.active_booking_count),
                 "primary_image": row.primary_image,
@@ -219,7 +224,7 @@ async def list_vehicles(
 
 
 async def get_vehicle_detail(db: AsyncSession, redis: Redis, vehicle_id: int) -> tuple[VehicleDetailResponse, bool]:
-    cache_key = f"vehicle:{vehicle_id}"
+    cache_key = f"vehicle:v2:{vehicle_id}"
 
     async def fetch() -> dict:
         result = await db.execute(
@@ -255,6 +260,7 @@ async def create_vehicle(db: AsyncSession, redis: Redis, payload: VehicleCreateR
         rental_price_per_day=payload.rental_price_per_day,
         fuel_type=payload.fuel_type,
         seating_capacity=payload.seating_capacity,
+        vehicle_count=payload.vehicle_count,
         availability_status=payload.availability_status,
         description=payload.description,
     )
@@ -278,12 +284,11 @@ async def update_vehicle(db: AsyncSession, redis: Redis, vehicle_id: int, payloa
     if vehicle is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
 
+    update_data = payload.model_dump(exclude_unset=True)
     if actor.role == UserRole.VEHICLE_MANAGER and vehicle.manager_id != actor.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only update your own vehicles.")
-    if await _vehicle_has_active_booking(db, vehicle.id):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vehicle has active or pending bookings and cannot be edited.")
-
-    update_data = payload.model_dump(exclude_unset=True)
+    if await _vehicle_has_active_booking(db, vehicle.id) and set(update_data) != {"vehicle_count"}:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vehicle has active or pending bookings and only stock count can be edited.")
     if "registration_number" in update_data:
         registration_number = update_data["registration_number"].strip().upper()
         existing = await db.execute(select(Vehicle.id).where(Vehicle.registration_number == registration_number, Vehicle.id != vehicle.id))
@@ -363,11 +368,11 @@ async def get_vehicle_availability(
     pickup = normalize_datetime(pickup_date) if pickup_date else None
     dropoff = normalize_datetime(return_date) if return_date else None
     hash_payload = {"pickup_date": pickup.isoformat() if pickup else None, "return_date": dropoff.isoformat() if dropoff else None}
-    cache_key = f"vehicle:availability:{vehicle_id}:{filters_hash(hash_payload)}"
+    cache_key = f"vehicle:availability:v2:{vehicle_id}:{filters_hash(hash_payload)}"
 
     async def fetch() -> dict:
-        vehicle_exists = await db.scalar(select(func.count(Vehicle.id)).where(Vehicle.id == vehicle_id))
-        if not vehicle_exists:
+        vehicle = await db.scalar(select(Vehicle).where(Vehicle.id == vehicle_id))
+        if vehicle is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
 
         result = await db.execute(
@@ -387,9 +392,9 @@ async def get_vehicle_availability(
             for row in result.all()
         ]
 
-        available = True
+        available = vehicle.availability_status and vehicle.vehicle_count > 0
         if pickup and dropoff:
-            available = not any(item.pickup_date < dropoff and item.return_date > pickup for item in ranges)
+            available = available and not any(item.pickup_date < dropoff and item.return_date > pickup for item in ranges)
 
         return jsonable_encoder(
             AvailabilityResponse(

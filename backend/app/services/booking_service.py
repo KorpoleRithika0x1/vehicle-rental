@@ -26,8 +26,9 @@ ACTIVE_BOOKING_STATUSES = [BookingStatus.PENDING, BookingStatus.APPROVED, Bookin
 async def _invalidate_booking_cache(redis: Redis, booking: Booking) -> None:
     try:
         await invalidate_pattern(redis, f"vehicle:availability:{booking.vehicle_id}:*")
+        await invalidate_pattern(redis, f"vehicle:availability:v2:{booking.vehicle_id}:*")
         await invalidate_pattern(redis, "vehicles:list:*")
-        await redis.delete(f"vehicle:{booking.vehicle_id}")
+        await redis.delete(f"vehicle:{booking.vehicle_id}", f"vehicle:v2:{booking.vehicle_id}")
         if booking.vehicle:
             await redis.delete(f"stats:manager:{booking.vehicle.manager_id}")
         await redis.delete("stats:admin")
@@ -126,6 +127,8 @@ async def create_booking(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
         if not vehicle.availability_status:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vehicle is currently unavailable.")
+        if vehicle.vehicle_count == 0:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This vehicle is currently out of stock.")
 
         days = calculate_rental_days(pickup_date, return_date)
         if days < 1:
@@ -147,8 +150,10 @@ async def create_booking(
 
         try:
             await redis.delete(f"vehicle:{vehicle_id}")
+            await redis.delete(f"vehicle:v2:{vehicle_id}")
             await invalidate_pattern(redis, "vehicles:list:*")
             await invalidate_pattern(redis, f"vehicle:availability:{vehicle_id}:*")
+            await invalidate_pattern(redis, f"vehicle:availability:v2:{vehicle_id}:*")
             await redis.delete("stats:admin")
             await redis.delete(f"stats:manager:{vehicle.manager_id}")
         except Exception as exc:
@@ -297,6 +302,14 @@ async def _load_booking_for_update(db: AsyncSession, booking_id: int) -> Booking
     return booking
 
 
+async def _load_vehicle_for_stock_update(db: AsyncSession, vehicle_id: int) -> Vehicle:
+    result = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id).with_for_update())
+    vehicle = result.scalar_one_or_none()
+    if vehicle is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
+    return vehicle
+
+
 def _check_management_access(actor: User, booking: Booking) -> None:
     if actor.role == UserRole.CUSTOMER:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Customers cannot manage bookings.")
@@ -315,6 +328,10 @@ async def approve_booking(
     _check_management_access(actor, booking)
     if booking.status != BookingStatus.PENDING:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only pending bookings can be approved.")
+    vehicle = await _load_vehicle_for_stock_update(db, booking.vehicle_id)
+    if vehicle.vehicle_count == 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This vehicle is currently out of stock.")
+    vehicle.vehicle_count -= 1
     booking.status = BookingStatus.APPROVED
     await db.commit()
     await db.refresh(booking)
@@ -361,9 +378,13 @@ async def cancel_booking(
     elif booking.status == BookingStatus.COMPLETED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Completed bookings cannot be cancelled.")
 
-    if booking.status == BookingStatus.CANCELLED:
+    previous_status = booking.status
+    if previous_status == BookingStatus.CANCELLED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking is already cancelled.")
 
+    if previous_status in [BookingStatus.APPROVED, BookingStatus.ACTIVE]:
+        vehicle = await _load_vehicle_for_stock_update(db, booking.vehicle_id)
+        vehicle.vehicle_count += 1
     booking.status = BookingStatus.CANCELLED
     await db.commit()
     await db.refresh(booking)
@@ -384,6 +405,8 @@ async def complete_booking(
     _check_management_access(actor, booking)
     if booking.status not in [BookingStatus.APPROVED, BookingStatus.ACTIVE]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved or active bookings can be completed.")
+    vehicle = await _load_vehicle_for_stock_update(db, booking.vehicle_id)
+    vehicle.vehicle_count += 1
     booking.status = BookingStatus.COMPLETED
     await db.commit()
     await db.refresh(booking)
