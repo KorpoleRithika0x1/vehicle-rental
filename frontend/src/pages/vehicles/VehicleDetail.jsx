@@ -3,8 +3,8 @@ import { ArrowLeft, Car, CheckCircle2, Fuel, MapPin, Users } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import Loader from '../../components/common/Loader';
+import PaymentModal from '../../components/booking/PaymentModal';
 import { useAuth } from '../../hooks/useAuth';
-import { useBooking } from '../../hooks/useBooking';
 import { useVehicleStore } from '../../store/vehicleStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 
@@ -15,12 +15,11 @@ export default function VehicleDetail() {
   const navigate = useNavigate();
   const { selectedVehicle, fetchVehicle } = useVehicleStore();
   const { isAuthenticated, user } = useAuth();
-  const { createBooking } = useBooking();
   const [isLoading, setIsLoading] = useState(true);
   const [pickupDate, setPickupDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showPayment, setShowPayment] = useState(false);
   const [addons, setAddons] = useState({
     theft: false,
     collision: false,
@@ -68,23 +67,24 @@ export default function VehicleDetail() {
     if (!pickupDate || !returnDate) { setError('Please select both dates.'); return; }
     if (new Date(returnDate) <= new Date(pickupDate)) { setError('Return date must be after the pickup date.'); return; }
     setError('');
-    setIsSubmitting(true);
-    try {
-      await createBooking({
-        vehicle_id: v.id,
-        pickup_date: new Date(pickupDate).toISOString(),
-        return_date: new Date(returnDate).toISOString(),
-      });
-      navigate('/booking/history');
-    } catch (err) {
-      setError(err?.normalizedMessage || 'Booking failed. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    setShowPayment(true);
   }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      {/* Payment modal */}
+      {showPayment && (
+        <PaymentModal
+          vehicle={v}
+          pickupDate={pickupDate}
+          returnDate={returnDate}
+          onClose={() => setShowPayment(false)}
+          onSuccess={() => {
+            setShowPayment(false);
+            navigate('/booking/history');
+          }}
+        />
+      )}
       {/* Back link */}
       <Link to="/vehicles" className="mb-6 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700">
         <ArrowLeft className="h-4 w-4" />
@@ -211,23 +211,14 @@ export default function VehicleDetail() {
                 </div>
 
                 {error && <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</p>}
-                {user?.license_verified ? (
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-xl bg-brand py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
-                  >
-                    {isSubmitting ? 'Booking...' : 'Book Now'}
-                  </button>
-                ) : (
-                  <Link
-                    to="/profile"
-                    className="block w-full rounded-xl bg-amber-500 py-3 text-center text-sm font-bold text-white transition hover:bg-amber-600 shadow-md"
-                  >
-                    Verify your driving license to rent → Go to Profile
-                  </Link>
-                )}
-                <p className="text-center text-xs text-slate-400">No credit card required to reserve</p>
+                <button
+                  type="submit"
+                  disabled={!pickupDate || !returnDate}
+                  className="w-full rounded-xl bg-brand py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                >
+                  Proceed to Payment
+                </button>
+                <p className="text-center text-xs text-slate-400">Secure payment via Stripe</p>
                 <div className="rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
                   <span className="font-semibold text-slate-600">Deposit at pick-up: </span>
                   {rentalDays > 0 ? formatCurrency(depositAmount) : '25% of total booking amount'}

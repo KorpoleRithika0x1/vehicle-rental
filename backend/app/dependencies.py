@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.models import User, UserRole
+from app.models import User, UserRole, AccountStatus
 from app.redis_client import get_redis
 from app.utils.jwt_utils import decode_token
 
@@ -35,7 +35,7 @@ async def get_current_user(
 
     result = await db.execute(select(User).where(User.id == int(user_id)))
     user = result.scalar_one_or_none()
-    if user is None or not user.is_active:
+    if user is None or user.account_status != AccountStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive.")
     return user
 

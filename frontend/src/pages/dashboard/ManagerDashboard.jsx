@@ -78,6 +78,7 @@ export default function ManagerDashboard() {
         { label: 'Add Car', to: '/dashboard/manager/vehicles/add', end: true },
         { label: 'Manage Cars', to: '/dashboard/manager/vehicles', end: true },
         { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
+        { label: 'Verifications', to: '/dashboard/manager/verifications' },
       ]}
     >
       <div className="space-y-8">

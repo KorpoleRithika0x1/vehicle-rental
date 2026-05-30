@@ -14,6 +14,7 @@ const LINK_ICONS = {
   '/dashboard/manager/vehicles/add': PlusSquare,
   '/dashboard/manager/vehicles': Car,
   '/dashboard/manager/bookings': ClipboardList,
+  '/dashboard/manager/verifications': ShieldCheck,
   '/dashboard/customer':         LayoutDashboard,
   '/booking/history':            ClipboardList,
   '/dashboard/stats':            BarChart2,

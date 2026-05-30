@@ -8,6 +8,7 @@ import { validateEmail } from '../../utils/validators';
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
+  const [statusBanner, setStatusBanner] = useState(null); // { type: 'info'|'error', message }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function Login() {
     if (!validateEmail(form.email)) nextErrors.email = 'Enter a valid email address.';
     if (!form.password) nextErrors.password = 'Password is required.';
     setErrors(nextErrors);
+    setStatusBanner(null);
     if (Object.keys(nextErrors).length) return;
 
     setIsSubmitting(true);
@@ -33,7 +35,16 @@ export default function Login() {
       const redirectPath = location.state?.from?.pathname || defaultPath;
       navigate(redirectPath, { replace: true });
     } catch (error) {
-      setErrors({ general: error.normalizedMessage });
+      const detail = error.normalizedMessage || '';
+      if (detail.toLowerCase().includes('pending verification')) {
+        setStatusBanner({ type: 'info', message: 'Your account is awaiting verification. Please check back once a manager has reviewed your documents.' });
+      } else if (detail.toLowerCase().includes('rejected')) {
+        setStatusBanner({ type: 'error', message: detail });
+      } else if (detail.toLowerCase().includes('suspended')) {
+        setStatusBanner({ type: 'error', message: 'Your account has been suspended. Please contact support.' });
+      } else {
+        setErrors({ general: detail });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -51,6 +62,14 @@ export default function Login() {
       <div className="glass-panel p-8">
         <h2 className="font-heading text-4xl text-ink">Login</h2>
         <p className="mt-3 text-sm text-slate-500">Use one of the seeded accounts or create your own customer account.</p>
+
+        {statusBanner?.type === 'info' && (
+          <div className="mt-4 rounded-2xl bg-blue-50 p-4 text-sm text-blue-700">{statusBanner.message}</div>
+        )}
+        {statusBanner?.type === 'error' && (
+          <div className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{statusBanner.message}</div>
+        )}
+
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-600">Email</label>

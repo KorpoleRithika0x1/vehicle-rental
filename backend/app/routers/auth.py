@@ -1,19 +1,20 @@
-from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.dependencies import get_current_user
-from app.models import User
+from app.models import User, UserRole
 from app.schemas.user import (
     LoginRequest,
     ProfileUpdateRequest,
     RefreshTokenRequest,
     RegisterRequest,
+    RegisterResponse,
     TokenResponse,
     UserResponse,
 )
 from app.schemas.common import ImageUploadResponse
-from app.services.auth_service import authenticate_user, refresh_tokens, register_user, update_profile
+from app.services.auth_service import authenticate_user, refresh_tokens, register_user, update_profile, register_customer_with_verification
 from app.services.upload_service import upload_image_to_cloudinary
 from app.limiter import limiter
 
@@ -29,6 +30,29 @@ async def register(
     db: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     return await register_user(db, payload)
+
+
+@router.post("/register/customer", response_model=RegisterResponse)
+@limiter.limit("10/minute")
+async def register_customer(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    phone_number: str = Form(None),
+    license_image: UploadFile = File(...),
+    live_photo: UploadFile = File(...),
+    db: AsyncSession = Depends(get_session),
+) -> RegisterResponse:
+    return await register_customer_with_verification(
+        db=db,
+        name=name,
+        email=email,
+        password=password,
+        phone_number=phone_number,
+        license_image=license_image,
+        live_photo=live_photo,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)

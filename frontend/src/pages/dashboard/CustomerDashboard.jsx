@@ -13,16 +13,22 @@ export default function CustomerDashboard() {
   const { bookings, fetchHistory } = useBooking();
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadDashboard() {
       setIsLoading(true);
+      setError(null);
       try {
         const [statsResponse] = await Promise.all([fetchCustomerStats(), fetchHistory({ page_size: 5 })]);
         if (!ignore) {
           setStats(statsResponse);
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err?.normalizedMessage || 'Failed to load dashboard data.');
         }
       } finally {
         if (!ignore) setIsLoading(false);
@@ -35,8 +41,23 @@ export default function CustomerDashboard() {
     };
   }, [fetchHistory]);
 
-  if (isLoading || !stats) {
+  if (isLoading) {
     return <Loader label="Building your customer dashboard..." fullScreen />;
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-lg font-semibold text-rose-600">Failed to load dashboard</p>
+        <p className="mt-2 text-sm text-slate-500">{error || 'An unexpected error occurred.'}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-6 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -10,6 +10,20 @@ export async function register(payload) {
   return data;
 }
 
+export async function registerCustomer(payload) {
+  const formData = new FormData();
+  formData.append('name', payload.name);
+  formData.append('email', payload.email);
+  formData.append('password', payload.password);
+  if (payload.phone_number) formData.append('phone_number', payload.phone_number);
+  formData.append('license_image', payload.license_image);
+  formData.append('live_photo', payload.live_photo);
+  const { data } = await apiClient.post('/auth/register/customer', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
 export async function fetchProfile() {
   const { data } = await apiClient.get('/auth/profile');
   return data;

@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, Index, Numeric, func
+from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, Index, Numeric, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -13,6 +13,13 @@ class BookingStatus(str, Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+
+class PaymentStatus(str, Enum):
+    PENDING = "pending"
+    PAID = "paid"
+    FAILED = "failed"
+    REFUNDED = "refunded"
 
 
 class Booking(Base):
@@ -35,6 +42,13 @@ class Booking(Base):
         nullable=False,
         server_default=BookingStatus.PENDING.value,
     )
+    payment_intent_id: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
+    payment_status: Mapped[PaymentStatus] = mapped_column(
+        SqlEnum(PaymentStatus, name="payment_status_enum", values_callable=lambda enum: [item.value for item in enum]),
+        nullable=False,
+        server_default=PaymentStatus.PENDING.value,
+    )
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

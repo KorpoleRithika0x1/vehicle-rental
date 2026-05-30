@@ -1,9 +1,10 @@
 import re
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
-from app.models.user import UserRole
+from app.models.user import UserRole, AccountStatus
 from app.schemas.common import ORMBaseModel
 
 
@@ -22,6 +23,11 @@ class RegisterRequest(BaseModel):
         if value and not PHONE_PATTERN.match(value):
             raise ValueError("Phone number format is invalid.")
         return value
+
+
+class RegisterResponse(BaseModel):
+    message: str
+    status: str
 
 
 class LoginRequest(BaseModel):
@@ -61,15 +67,24 @@ class UserResponse(ORMBaseModel):
     name: str
     email: EmailStr
     role: UserRole
+    account_status: AccountStatus
     phone_number: str | None = None
     profile_image_url: str | None = None
-    is_active: bool
+    license_image_url: str | None = None
+    live_photo_url: str | None = None
+    verification_reviewed_by: str | None = None
+    verification_reviewed_at: datetime | None = None
+    rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime
     driving_license_number: str | None = None
     license_verified: bool = False
     license_document_url: str | None = None
     license_number: str | None = None
+    
+    @property
+    def is_active(self) -> bool:
+        return self.account_status == AccountStatus.ACTIVE
 
 
 class TokenResponse(BaseModel):

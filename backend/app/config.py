@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     cloudinary_cloud_name: str | None = Field(default=None, alias="CLOUDINARY_CLOUD_NAME")
     cloudinary_api_key: str | None = Field(default=None, alias="CLOUDINARY_API_KEY")
     cloudinary_api_secret: str | None = Field(default=None, alias="CLOUDINARY_API_SECRET")
+    stripe_secret_key: str | None = Field(default=None, alias="STRIPE_SECRET_KEY")
+    stripe_publishable_key: str | None = Field(default=None, alias="STRIPE_PUBLISHABLE_KEY")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
