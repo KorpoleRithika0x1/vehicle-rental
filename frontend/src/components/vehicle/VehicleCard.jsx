@@ -59,7 +59,7 @@ export default function VehicleCard({ vehicle }) {
           </div>
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-slate-400" />
-            {stockCount > 0 && vehicle.availability_status ? `${stockCount} in stock` : 'Out of stock'}
+            {vehicle.city || (stockCount > 0 && vehicle.availability_status ? `${stockCount} in stock` : 'Out of stock')}
           </div>
         </div>
       </div>

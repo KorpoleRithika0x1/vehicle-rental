@@ -1,6 +1,5 @@
 import { ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet';
 import { Link, useNavigate } from 'react-router-dom';
 
 import {
@@ -8,7 +7,6 @@ import {
   DESTINATIONS,
   FAQ_ITEMS,
   FEATURE_ITEMS,
-  MAP_LOCATIONS,
   SIZE_CARDS,
   USP_ITEMS,
 } from '../utils/constants';
@@ -268,25 +266,6 @@ export default function Home() {
               {activeFaq === index && <p className="mt-4 text-sm leading-6 text-slate-500">{item.answer}</p>}
             </button>
           ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Map of Car Rental Locations</p>
-          <h2 className="mt-4 font-heading text-5xl text-ink">Coverage that feels tangible.</h2>
-        </div>
-        <div className="overflow-hidden rounded-[2rem] border border-slate-200 shadow-soft">
-          <div className="h-[420px]">
-            <MapContainer center={[39.5, -98.35]} zoom={4} scrollWheelZoom={false}>
-              <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              {MAP_LOCATIONS.map((locationItem) => (
-                <CircleMarker key={locationItem.name} center={locationItem.position} radius={10} pathOptions={{ color: '#16213e', fillColor: '#d9a441', fillOpacity: 0.8 }}>
-                  <Popup>{locationItem.name}</Popup>
-                </CircleMarker>
-              ))}
-            </MapContainer>
-          </div>
         </div>
       </section>
 

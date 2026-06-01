@@ -1,8 +1,12 @@
 export function formatCurrency(value) {
+  return formatINR(value);
+}
+
+export function formatINR(value) {
   const amount = Number(value || 0);
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
+    currency: 'INR',
+    maximumFractionDigits: 0,
   }).format(amount);
 }

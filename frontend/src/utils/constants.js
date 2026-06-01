@@ -43,52 +43,53 @@ export const BRAND_LOGOS = ['Thrifty', 'National', 'Alamo', 'Hertz', 'Europcar',
 
 export const DESTINATIONS = [
   {
-    id: 'city',
-    title: 'City Escapes',
+    id: 'metro',
+    title: 'Metro Cities',
     subtitle: 'High-frequency business and leisure pickups',
-    image:
-      'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1200&q=80',
-    locations: ['New York', 'Chicago', 'Austin'],
+    image: 'https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?auto=format&fit=crop&w=1200&q=80',
+    locations: ['Mumbai', 'Delhi', 'Bangalore'],
   },
   {
     id: 'coastal',
     title: 'Coastal Drives',
-    subtitle: 'Premium convertibles and SUVs for sea-side road trips',
-    image:
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
-    locations: ['Miami', 'San Diego', 'Los Angeles'],
+    subtitle: 'Premium vehicles for sea-side road trips',
+    image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1200&q=80',
+    locations: ['Goa', 'Kochi', 'Chennai'],
   },
   {
-    id: 'mountain',
-    title: 'Mountain Routes',
-    subtitle: 'Adventure-ready traction and roomy cabins',
-    image:
-      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80',
-    locations: ['Denver', 'Bozeman', 'Salt Lake City'],
+    id: 'hills',
+    title: 'Hill Escapes',
+    subtitle: 'Adventure-ready vehicles for mountain routes',
+    image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1200&q=80',
+    locations: ['Manali', 'Guwahati', 'Kolkata'],
+  },
+  {
+    id: 'south',
+    title: 'South India',
+    subtitle: 'Cultural hubs and temple town road trips',
+    image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1200&q=80',
+    locations: ['Hyderabad', 'Chennai', 'Kochi'],
   },
 ];
 
 export const SIZE_CARDS = [
   {
     title: 'Cars',
-    priceRange: '$39 - $129 / day',
+    priceRange: '₹800 – ₹3,500 / day',
     description: 'Best for agile city travel, airport hops, and solo or couple journeys.',
-    image:
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
+    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
   },
   {
     title: 'SUVs',
-    priceRange: '$96 - $176 / day',
+    priceRange: '₹2,000 – ₹6,000 / day',
     description: 'Roomy, confident, and ideal for family trips or executive travel.',
-    image:
-      'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=80',
+    image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=80',
   },
   {
     title: 'Vans',
-    priceRange: '$165 - $189 / day',
+    priceRange: '₹2,500 – ₹8,000 / day',
     description: 'Group-ready seating and luggage capacity without sacrificing comfort.',
-    image:
-      'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1200&q=80',
+    image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1200&q=80',
   },
 ];
 
@@ -120,12 +121,6 @@ export const SUPPORT_LINKS = {
   rental: ['Airport Rentals', 'Business Travel', 'Weekend Deals', 'Long-Term Hire'],
   support: ['Help Center', 'Contact Support', 'Terms & Conditions', 'Privacy Policy'],
 };
-
-export const MAP_LOCATIONS = [
-  { name: 'Downtown Hub', position: [40.7128, -74.006] },
-  { name: 'Airport Desk', position: [41.9786, -87.9048] },
-  { name: 'Tech District', position: [30.2672, -97.7431] },
-];
 
 export const BOOKING_STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-800',

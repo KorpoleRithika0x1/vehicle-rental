@@ -28,6 +28,7 @@ class VehicleBase(BaseModel):
     seating_capacity: int = Field(ge=1, le=50)
     vehicle_count: int = Field(default=1, ge=0)
     availability_status: bool = True
+    city: str = Field(default="Mumbai", max_length=100)
     description: str | None = None
 
 
@@ -54,6 +55,7 @@ class VehicleUpdateRequest(BaseModel):
     seating_capacity: int | None = Field(default=None, ge=1, le=50)
     vehicle_count: int | None = Field(default=None, ge=0)
     availability_status: bool | None = None
+    city: str | None = Field(default=None, max_length=100)
     description: str | None = None
 
 
@@ -69,6 +71,7 @@ class VehicleListItem(BaseModel):
     seating_capacity: int
     vehicle_count: int
     availability_status: bool
+    city: str = "Mumbai"
     has_active_booking: bool = False
     primary_image: str | None = None
     created_at: datetime
@@ -86,6 +89,7 @@ class VehicleResponse(ORMBaseModel):
     seating_capacity: int
     vehicle_count: int
     availability_status: bool
+    city: str = "Mumbai"
     description: str | None = None
     created_at: datetime
     updated_at: datetime

@@ -204,7 +204,7 @@ export default function VehicleDetail() {
                           />
                           <span className="text-slate-600">{addon.label}</span>
                         </div>
-                        <span className="font-medium text-slate-500">${addon.price}/day</span>
+                        <span className="font-medium text-slate-500">₹{addon.price}/day</span>
                       </label>
                     ))}
                   </div>

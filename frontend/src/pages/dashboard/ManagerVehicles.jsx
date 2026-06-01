@@ -7,6 +7,7 @@ import Loader from '../../components/common/Loader';
 import DashboardShell from '../../components/dashboard/DashboardShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useUiStore } from '../../store/uiStore';
+import { CITIES } from '../../utils/cities';
 
 const initialForm = {
   vehicle_name: '',
@@ -18,6 +19,7 @@ const initialForm = {
   seating_capacity: '',
   vehicle_count: 1,
   availability_status: true,
+  city: 'Mumbai',
   description: '',
   image_url: '',
 };
@@ -62,9 +64,12 @@ function EditModal({ form, setForm, onSubmit, onClose, isSaving, isUploadingImag
             <select value={form.fuel_type} onChange={(e) => setForm((c) => ({ ...c, fuel_type: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none">
               {['petrol', 'diesel', 'electric', 'hybrid'].map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
-            <input value={form.rental_price_per_day} type="number" required onChange={(e) => setForm((c) => ({ ...c, rental_price_per_day: e.target.value }))} placeholder="Price per day" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
+            <input value={form.rental_price_per_day} type="number" required onChange={(e) => setForm((c) => ({ ...c, rental_price_per_day: e.target.value }))} placeholder="Price per day (₹)" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
             <input value={form.seating_capacity} type="number" required onChange={(e) => setForm((c) => ({ ...c, seating_capacity: e.target.value }))} placeholder="Seating capacity" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
             <input value={form.vehicle_count} type="number" min="0" required onChange={(e) => setForm((c) => ({ ...c, vehicle_count: e.target.value }))} placeholder="Vehicle count" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
+            <select value={form.city} onChange={(e) => setForm((c) => ({ ...c, city: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none">
+              {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
             <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600">
               <input type="checkbox" checked={form.availability_status} onChange={(e) => setForm((c) => ({ ...c, availability_status: e.target.checked }))} />
               Available for booking
@@ -162,6 +167,7 @@ export default function ManagerVehicles() {
       seating_capacity: vehicle.seating_capacity,
       vehicle_count: vehicle.vehicle_count ?? 1,
       availability_status: vehicle.availability_status,
+      city: vehicle.city || 'Mumbai',
       description: vehicle.description || '',
       image_url: vehicle.primary_image || '',
     });
@@ -301,9 +307,12 @@ export default function ManagerVehicles() {
             <select value={form.fuel_type} onChange={(e) => setForm((c) => ({ ...c, fuel_type: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none">
               {['petrol', 'diesel', 'electric', 'hybrid'].map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
-            <input value={form.rental_price_per_day} type="number" required onChange={(e) => setForm((c) => ({ ...c, rental_price_per_day: e.target.value }))} placeholder="Price per day" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
+            <input value={form.rental_price_per_day} type="number" required onChange={(e) => setForm((c) => ({ ...c, rental_price_per_day: e.target.value }))} placeholder="Price per day (₹)" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
             <input value={form.seating_capacity} type="number" required onChange={(e) => setForm((c) => ({ ...c, seating_capacity: e.target.value }))} placeholder="Seating capacity" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
             <input value={form.vehicle_count} type="number" min="0" required onChange={(e) => setForm((c) => ({ ...c, vehicle_count: e.target.value }))} placeholder="Vehicle count" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
+            <select value={form.city} onChange={(e) => setForm((c) => ({ ...c, city: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none">
+              {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
             <label className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600">
               <input type="checkbox" checked={form.availability_status} onChange={(e) => setForm((c) => ({ ...c, availability_status: e.target.checked }))} />
               Available for booking
@@ -356,7 +365,7 @@ export default function ManagerVehicles() {
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs text-slate-500">
                   <span className="truncate">{vehicle.registration_number}</span>
-                  <span className="text-right font-medium text-slate-700">${vehicle.rental_price_per_day}/day</span>
+                  <span className="text-right font-medium text-slate-700">₹{vehicle.rental_price_per_day}/day</span>
                   <span className="capitalize">{vehicle.fuel_type}</span>
                   <span className="text-right">{vehicle.seating_capacity} seats</span>
                 </div>

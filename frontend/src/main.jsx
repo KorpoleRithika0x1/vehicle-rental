@@ -1,4 +1,3 @@
-import 'leaflet/dist/leaflet.css';
 import 'react-datepicker/dist/react-datepicker.css';
 import './index.css';
 

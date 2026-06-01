@@ -97,7 +97,7 @@ export default function ManagerDashboard() {
           <div className="rounded-[1.5rem] border border-slate-200 p-6">
             <h2 className="font-heading text-3xl text-ink">Monthly Revenue</h2>
             <p className="mt-2 text-lg text-slate-500">Revenue for current month</p>
-            <p className="mt-5 text-5xl font-bold text-brand">${Number(stats.monthly_revenue || 0)}</p>
+            <p className="mt-5 text-5xl font-bold text-brand">₹{Number(stats.monthly_revenue || 0).toLocaleString('en-IN')}</p>
           </div>
         </div>
 

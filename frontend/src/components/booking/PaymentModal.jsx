@@ -6,7 +6,7 @@ import { CheckCircle, X } from 'lucide-react';
 import { confirmPayment, createPaymentIntent } from '../../api/payments';
 
 // Load Stripe once outside component to avoid re-instantiation
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_YOUR_TEST_KEY');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const CARD_ELEMENT_OPTIONS = {
   style: {
