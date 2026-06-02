@@ -1,23 +1,35 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { fetchBookings } from '../../api/bookings';
 import Loader from '../../components/common/Loader';
 import BookingForm from '../../components/booking/BookingForm';
 import VehicleImageGallery from '../../components/vehicle/VehicleImageGallery';
+import { useAuth } from '../../hooks/useAuth';
 import { useVehicleStore } from '../../store/vehicleStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 export default function BookingConfirm() {
   const { id } = useParams();
   const { selectedVehicle, availability, fetchVehicle, fetchAvailability } = useVehicleStore();
+  const { isAuthenticated, user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [hasActiveBooking, setHasActiveBooking] = useState(false);
 
   useEffect(() => {
     let ignore = false;
     async function loadVehicle() {
       setIsLoading(true);
       try {
-        await Promise.all([fetchVehicle(id), fetchAvailability(id)]);
+        const requests = [fetchVehicle(id), fetchAvailability(id)];
+        if (isAuthenticated && user?.role === 'customer') {
+          requests.push(
+            fetchBookings({ status: 'pending,approved,active', page_size: 50 }).then((data) => {
+              setHasActiveBooking((data.items || []).length > 0);
+            })
+          );
+        }
+        await Promise.all(requests);
       } finally {
         if (!ignore) setIsLoading(false);
       }
@@ -26,7 +38,7 @@ export default function BookingConfirm() {
     return () => {
       ignore = true;
     };
-  }, [fetchAvailability, fetchVehicle, id]);
+  }, [fetchAvailability, fetchVehicle, id, isAuthenticated, user?.role]);
 
   if (isLoading || !selectedVehicle) {
     return <Loader label="Loading booking workspace..." fullScreen />;
@@ -46,7 +58,11 @@ export default function BookingConfirm() {
             <div className="mt-4 text-3xl font-semibold text-brand">{formatCurrency(selectedVehicle.rental_price_per_day)} / day</div>
           </div>
         </div>
-        <BookingForm vehicle={selectedVehicle} availability={availability} disabled={!selectedVehicle.availability_status} />
+        <BookingForm
+          vehicle={selectedVehicle}
+          availability={availability}
+          disabled={!selectedVehicle.availability_status || hasActiveBooking}
+        />
       </div>
     </div>
   );

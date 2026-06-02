@@ -15,6 +15,11 @@ export async function fetchBooking(id) {
   return data;
 }
 
+export async function fetchBookingAvailability(vehicleId) {
+  const { data } = await apiClient.get(`/bookings/availability/${vehicleId}`);
+  return data;
+}
+
 export async function cancelBookingRequest(id) {
   const { data } = await apiClient.put(`/bookings/${id}/cancel`);
   return data;

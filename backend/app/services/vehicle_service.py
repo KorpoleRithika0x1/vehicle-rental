@@ -392,7 +392,7 @@ async def get_vehicle_availability(
             for row in result.all()
         ]
 
-        available = vehicle.availability_status and vehicle.vehicle_count > 0
+        available = vehicle.availability_status
         if pickup and dropoff:
             available = available and not any(item.pickup_date < dropoff and item.return_date > pickup for item in ranges)
 

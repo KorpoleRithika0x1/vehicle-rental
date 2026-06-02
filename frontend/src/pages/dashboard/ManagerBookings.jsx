@@ -6,7 +6,7 @@ import DashboardShell from '../../components/dashboard/DashboardShell';
 import { useBooking } from '../../hooks/useBooking';
 
 export default function ManagerBookings() {
-  const { bookings, fetchHistory, approveBooking, rejectBooking, completeBooking } = useBooking();
+  const { bookings, fetchHistory, completeBooking } = useBooking();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function ManagerBookings() {
   return (
     <DashboardShell
       title="Manage Bookings"
-      subtitle="View bookings for your vehicles and approve, reject, or complete rental requests."
+      subtitle="Complete bookings once the return date has passed."
       links={[
         { label: 'Dashboard', to: '/dashboard/manager', end: true },
         { label: 'Add Car', to: '/dashboard/manager/vehicles/add', end: true },
@@ -44,25 +44,25 @@ export default function ManagerBookings() {
     >
       <BookingTable
         bookings={bookings}
-        actions={(booking) => (
-          <div className="flex flex-wrap gap-2">
-            {booking.status === 'pending' ? (
-              <>
-                <button type="button" onClick={() => approveBooking(booking.id)} className="rounded-full bg-emerald-500 px-3 py-2 text-xs font-semibold text-white">
-                  Approve
-                </button>
-                <button type="button" onClick={() => rejectBooking(booking.id)} className="rounded-full bg-rose-500 px-3 py-2 text-xs font-semibold text-white">
-                  Reject
-                </button>
-              </>
-            ) : null}
-            {['approved', 'active'].includes(booking.status) ? (
-              <button type="button" onClick={() => completeBooking(booking.id)} className="rounded-full bg-brand px-3 py-2 text-xs font-semibold text-white">
-                Complete
-              </button>
-            ) : null}
-          </div>
-        )}
+        actions={(booking) => {
+          if (booking.status !== 'approved') return null;
+          const canComplete = new Date() >= new Date(booking.return_date);
+          return (
+            <button
+              type="button"
+              onClick={() => canComplete && completeBooking(booking.id)}
+              disabled={!canComplete}
+              title={!canComplete ? 'Available after return date' : 'Mark as completed'}
+              className={`rounded-full px-3 py-2 text-xs font-semibold text-white transition ${
+                canComplete
+                  ? 'bg-brand hover:opacity-90'
+                  : 'cursor-not-allowed bg-slate-300'
+              }`}
+            >
+              Complete
+            </button>
+          );
+        }}
       />
     </DashboardShell>
   );

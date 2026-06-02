@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 
+import { fetchBookings } from '../../api/bookings';
 import Pagination from '../../components/common/Pagination';
 import VehicleGrid from '../../components/vehicle/VehicleGrid';
+import { useAuth } from '../../hooks/useAuth';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useVehicleStore } from '../../store/vehicleStore';
 
@@ -21,11 +23,13 @@ const emptyFilters = {
 
 export default function VehicleList() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isAuthenticated, user } = useAuth();
   const vehicles = useVehicleStore((state) => state.vehicles);
   const pagination = useVehicleStore((state) => state.pagination);
   const fetchVehicles = useVehicleStore((state) => state.fetchVehicles);
   const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [hasActiveBooking, setHasActiveBooking] = useState(false);
 
   const [localFilters, setLocalFilters] = useState(() => ({
     ...emptyFilters,
@@ -42,6 +46,26 @@ export default function VehicleList() {
   const debouncedSearch = useDebounce(localFilters.search, 400);
   const fetchRef = useRef(fetchVehicles);
   fetchRef.current = fetchVehicles;
+
+  useEffect(() => {
+    let ignore = false;
+    async function loadActiveBooking() {
+      if (!isAuthenticated || user?.role !== 'customer') {
+        setHasActiveBooking(false);
+        return;
+      }
+      try {
+        const data = await fetchBookings({ status: 'pending,approved,active', page_size: 50 });
+        if (!ignore) setHasActiveBooking((data.items || []).length > 0);
+      } catch {
+        if (!ignore) setHasActiveBooking(false);
+      }
+    }
+    loadActiveBooking();
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, user?.role]);
 
   useEffect(() => {
     const merged = { ...localFilters, search: debouncedSearch };
@@ -151,6 +175,17 @@ export default function VehicleList() {
 
       {/* Results */}
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        {hasActiveBooking ? (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="font-semibold">You already have an active booking.</div>
+            <div className="mt-1 flex items-center gap-2">
+              <span>You can book another vehicle once your current booking is completed or cancelled.</span>
+              <Link to="/customer/bookings" className="font-semibold underline">
+                View My Bookings
+              </Link>
+            </div>
+          </div>
+        ) : null}
         {!isLoading && (
           <p className="mb-6 text-sm font-semibold text-slate-600">
             Showing {pagination.total} Car{pagination.total !== 1 ? 's' : ''}

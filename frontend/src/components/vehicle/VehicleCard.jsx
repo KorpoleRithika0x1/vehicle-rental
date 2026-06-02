@@ -14,11 +14,10 @@ const vehicleTypeLabels = {
 export default function VehicleCard({ vehicle }) {
   const typeLabel = vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type;
   const stockCount = Number(vehicle.vehicle_count ?? 0);
-  const stockBadge = !vehicle.availability_status || stockCount === 0
-    ? { label: 'Out of Stock', className: 'bg-rose-600 text-white' }
-    : stockCount === 1
-      ? { label: 'Low Stock — 1 left', className: 'bg-amber-500 text-white' }
-      : { label: 'Available', className: 'bg-emerald-600 text-white' };
+  const isAvailable = vehicle.availability_status && stockCount > 0;
+  const stockBadge = isAvailable
+    ? { label: 'Available', className: 'bg-emerald-600 text-white' }
+    : { label: 'Unavailable', className: 'bg-rose-600 text-white' };
 
   return (
     <Link to={`/vehicles/${vehicle.id}`} className="block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">

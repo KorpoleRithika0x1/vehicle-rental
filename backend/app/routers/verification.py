@@ -14,6 +14,7 @@ from app.schemas.verification import (
     RejectRequest,
     VerificationStatsResponse,
 )
+from app.services.email_service import send_account_approved_email
 
 
 router = APIRouter(prefix="/verification", tags=["Verification"])
@@ -90,8 +91,29 @@ async def approve_account(
     user.verification_reviewed_by = str(current_user.id)
     user.verification_reviewed_at = datetime.utcnow()
     user.rejection_reason = None
-    
+
     await db.commit()
+
+    from app.services.notification_service import create_notification
+    try:
+        await create_notification(
+            db=db,
+            user_id=user.id,
+            title="Account Approved",
+            message="Your account has been verified and approved. You can now log in and start booking vehicles!",
+            notification_type="account_approved",
+            reference_id=str(user.id),
+        )
+    except Exception:
+        pass
+
+    try:
+        await send_account_approved_email(
+            to_email=user.email,
+            customer_name=user.name,
+        )
+    except Exception as e:
+        print(f"Email send failed for {user.email}: {e}")
     
     return {"message": "Account approved. Customer can now log in."}
 

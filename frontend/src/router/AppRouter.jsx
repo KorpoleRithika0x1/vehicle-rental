@@ -14,6 +14,10 @@ const VehicleDetail = lazy(() => import('../pages/vehicles/VehicleDetail'));
 const BookingConfirm = lazy(() => import('../pages/booking/BookingConfirm'));
 const BookingHistory = lazy(() => import('../pages/booking/BookingHistory'));
 const CustomerDashboard = lazy(() => import('../pages/dashboard/CustomerDashboard'));
+const CustomerVehicles = lazy(() => import('../pages/customer/CustomerVehicles'));
+const CustomerBookings = lazy(() => import('../pages/customer/CustomerBookings'));
+const CustomerHistory = lazy(() => import('../pages/customer/CustomerHistory'));
+const CustomerProfilePage = lazy(() => import('../pages/customer/CustomerProfilePage'));
 const ManagerDashboard = lazy(() => import('../pages/dashboard/ManagerDashboard'));
 const AdminDashboard = lazy(() => import('../pages/dashboard/AdminDashboard'));
 const ManagerVehicles = lazy(() => import('../pages/dashboard/ManagerVehicles'));
@@ -80,6 +84,11 @@ export default function AppRouter() {
           <Route element={<RoleGuard roles={['customer']} />}>
             <Route path="/vehicles/:id/book" element={<BookingConfirm />} />
             <Route path="/dashboard/customer" element={<CustomerDashboard />} />
+            <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+            <Route path="/customer/vehicles" element={<CustomerVehicles />} />
+            <Route path="/customer/bookings" element={<CustomerBookings />} />
+            <Route path="/customer/history" element={<CustomerHistory />} />
+            <Route path="/customer/profile" element={<CustomerProfilePage />} />
           </Route>
 
           <Route element={<RoleGuard roles={['vehicle_manager']} />}>

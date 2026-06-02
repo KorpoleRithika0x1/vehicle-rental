@@ -90,6 +90,8 @@ uvicorn app.main:app --reload
 
 If you run the backend outside Docker, update `backend/.env` first so `DATABASE_URL` and `REDIS_URL` point to `localhost` instead of the Compose service names (`mysql` and `redis`).
 
+If you enable account approval emails, `SMTP_PASSWORD` must be a Gmail App Password, not your regular Gmail password. Generate one at `https://myaccount.google.com/apppasswords` with 2FA enabled.
+
 ## Frontend Commands
 
 ```bash

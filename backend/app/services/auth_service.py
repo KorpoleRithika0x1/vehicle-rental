@@ -15,6 +15,7 @@ from app.schemas.user import (
 )
 from app.utils.jwt_utils import create_access_token, create_refresh_token, decode_token
 from app.utils.password import hash_password, validate_password_strength, verify_password
+from app.services.notification_service import create_notification
 
 
 async def register_user(db: AsyncSession, payload: RegisterRequest) -> TokenResponse:
@@ -154,6 +155,27 @@ async def register_customer_with_verification(
     )
     db.add(user)
     await db.commit()
+    await db.refresh(user)
+
+    admins = await db.execute(select(User).where(User.role == UserRole.ADMIN))
+    for admin in admins.scalars().all():
+        try:
+            await create_notification(
+                db=db,
+                user_id=admin.id,
+                title="New Account Verification Request",
+                message=(
+                    f"{user.name} ({user.email}) has submitted their driving license "
+                    "for account verification."
+                ),
+                notification_type="account_request",
+                reference_id=str(user.id),
+            )
+        except Exception as exc:
+            logger.warning(
+                f"account_verification_notification_failed user_id={user.id} "
+                f"admin_id={admin.id} error={exc}"
+            )
 
     logger.info(f"auth_register_with_verification_success user_id={user.id} email={user.email}")
     return RegisterResponse(

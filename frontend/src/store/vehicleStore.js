@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { fetchVehicle, fetchVehicleAvailability, fetchVehicles } from '../api/vehicles';
+import { fetchBookingAvailability } from '../api/bookings';
 
 const defaultFilters = {
   search: '',
@@ -44,7 +45,7 @@ export const useVehicleStore = create((set, get) => ({
     return vehicle;
   },
   fetchAvailability: async (vehicleId, params) => {
-    const availability = await fetchVehicleAvailability(vehicleId, params);
+    const availability = params ? await fetchVehicleAvailability(vehicleId, params) : await fetchBookingAvailability(vehicleId);
     set({ availability });
     return availability;
   },

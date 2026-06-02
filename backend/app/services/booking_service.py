@@ -15,12 +15,13 @@ from app.models import Booking, BookingStatus, User, UserRole, Vehicle, VehicleI
 from app.schemas.booking import BookingDetailResponse, BookingListItem
 from app.schemas.common import PaginatedResponse
 from app.services.cache_service import invalidate_pattern
+from app.services.notification_service import create_notification
 from app.utils.date_utils import calculate_rental_days, validate_booking_dates
 
 
 settings = get_settings()
 LOCK_EXPIRE_SECONDS = settings.redis_lock_expire_seconds
-ACTIVE_BOOKING_STATUSES = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]
+ACTIVE_BOOKING_STATUSES = [BookingStatus.APPROVED, BookingStatus.ACTIVE]
 
 
 async def _invalidate_booking_cache(redis: Redis, booking: Booking) -> None:
@@ -59,20 +60,24 @@ async def create_booking(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found.")
 
     pickup_date, return_date = validate_booking_dates(pickup_date, return_date)
-    lock_key = f"booking_lock:vehicle:{vehicle_id}"
-    lock_value = str(uuid.uuid4())
 
-    current_active_bookings = await db.scalar(
-        select(func.count(Booking.id)).where(
+    # Block customer if they already have an approved/active booking overlapping these dates
+    existing_active = await db.execute(
+        select(Booking.id).where(
             Booking.customer_id == customer_id,
             Booking.status.in_(ACTIVE_BOOKING_STATUSES),
+            Booking.pickup_date < return_date,
+            Booking.return_date > pickup_date,
         )
     )
-    if (current_active_bookings or 0) >= 3:
+    if existing_active.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You cannot have more than 3 active or pending bookings at a time.",
+            detail="You already have a booking that overlaps with these dates.",
         )
+
+    lock_key = f"booking_lock:vehicle:{vehicle_id}"
+    lock_value = str(uuid.uuid4())
 
     try:
         acquired = await asyncio.wait_for(
@@ -98,19 +103,16 @@ async def create_booking(
 
     logger.info(f"booking_lock_acquired vehicle_id={vehicle_id} customer_id={customer_id}")
     try:
-        overlap = await db.execute(
-            select(Booking.id).where(
+        # Count active bookings for this vehicle in the date range vs stock
+        overlap_count_result = await db.execute(
+            select(func.count(Booking.id)).where(
                 Booking.vehicle_id == vehicle_id,
                 Booking.status.in_(ACTIVE_BOOKING_STATUSES),
                 Booking.pickup_date < return_date,
                 Booking.return_date > pickup_date,
             )
         )
-        if overlap.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Vehicle is not available for the selected dates. Please choose dates after the existing booking ends.",
-            )
+        overlap_count = overlap_count_result.scalar() or 0
 
         vehicle_result = await db.execute(
             select(Vehicle)
@@ -122,8 +124,12 @@ async def create_booking(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
         if not vehicle.availability_status:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vehicle is currently unavailable.")
-        if vehicle.vehicle_count == 0:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This vehicle is currently out of stock.")
+
+        if overlap_count >= vehicle.vehicle_count:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Vehicle is not available for the selected dates.",
+            )
 
         days = calculate_rental_days(pickup_date, return_date)
         if days < 1:
@@ -136,12 +142,39 @@ async def create_booking(
             pickup_date=pickup_date,
             return_date=return_date,
             total_amount=total,
-            status=BookingStatus.PENDING,
+            status=BookingStatus.APPROVED,
         )
         db.add(booking)
         await db.commit()
         await db.refresh(booking)
         booking.vehicle = vehicle
+        # Decrement stock immediately on booking
+        vehicle_for_stock = await _load_vehicle_for_stock_update(db, vehicle_id)
+        vehicle_for_stock.vehicle_count -= 1
+        await db.commit()
+        pickup_str = booking.pickup_date.strftime("%d %b %Y")
+        return_str = booking.return_date.strftime("%d %b %Y")
+        await create_notification(
+            db=db,
+            user_id=vehicle.manager_id,
+            title="New Booking Confirmed",
+            message=(
+                f"{customer.name} has booked {vehicle.vehicle_name} "
+                f"from {pickup_str} to {return_str}."
+            ),
+            notification_type="booking_confirmed",
+            reference_id=str(booking.id),
+        )
+        await create_notification(
+            db=db,
+            user_id=customer_id,
+            title="Booking Confirmed",
+            message=(
+                f"Your booking for {vehicle.vehicle_name} from {pickup_str} to {return_str} is confirmed."
+            ),
+            notification_type="booking_confirmed",
+            reference_id=str(booking.id),
+        )
 
         try:
             await redis.delete(f"vehicle:{vehicle_id}")
@@ -171,6 +204,7 @@ async def list_bookings(
     *,
     page: int,
     page_size: int,
+    status_filter: str | None = None,
 ) -> PaginatedResponse[BookingListItem]:
     primary_image_subquery = (
         select(VehicleImage.vehicle_id, VehicleImage.image_url.label("primary_image"))
@@ -198,6 +232,15 @@ async def list_bookings(
         .order_by(Booking.created_at.desc())
     )
     count_query = select(func.count(Booking.id)).join(Vehicle, Vehicle.id == Booking.vehicle_id)
+    if status_filter:
+        status_values = [value.strip().lower() for value in status_filter.split(",") if value.strip()]
+        if status_values:
+            try:
+                statuses = [BookingStatus(value) for value in status_values]
+            except ValueError as exc:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid booking status filter.") from exc
+            query = query.where(Booking.status.in_(statuses))
+            count_query = count_query.where(Booking.status.in_(statuses))
     if actor.role == UserRole.CUSTOMER:
         query = query.where(Booking.customer_id == actor.id)
         count_query = count_query.where(Booking.customer_id == actor.id)
@@ -324,8 +367,6 @@ async def approve_booking(
     if booking.status != BookingStatus.PENDING:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only pending bookings can be approved.")
     vehicle = await _load_vehicle_for_stock_update(db, booking.vehicle_id)
-    if vehicle.vehicle_count == 0:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This vehicle is currently out of stock.")
     vehicle.vehicle_count -= 1
     booking.status = BookingStatus.APPROVED
     await db.commit()
@@ -368,16 +409,15 @@ async def cancel_booking(
     if actor.role == UserRole.CUSTOMER:
         if booking.customer_id != actor.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only cancel your own bookings.")
-        if booking.status != BookingStatus.PENDING:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Customers can only cancel pending bookings.")
+        if booking.status not in [BookingStatus.APPROVED]:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="You can only cancel approved bookings.")
     elif booking.status == BookingStatus.COMPLETED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Completed bookings cannot be cancelled.")
 
-    previous_status = booking.status
-    if previous_status == BookingStatus.CANCELLED:
+    if booking.status == BookingStatus.CANCELLED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking is already cancelled.")
 
-    if previous_status in [BookingStatus.APPROVED, BookingStatus.ACTIVE]:
+    if booking.status == BookingStatus.APPROVED:
         vehicle = await _load_vehicle_for_stock_update(db, booking.vehicle_id)
         vehicle.vehicle_count += 1
     booking.status = BookingStatus.CANCELLED
@@ -398,14 +438,27 @@ async def complete_booking(
 ) -> Booking:
     booking = await _load_booking_for_update(db, booking_id)
     _check_management_access(actor, booking)
-    if booking.status not in [BookingStatus.APPROVED, BookingStatus.ACTIVE]:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved or active bookings can be completed.")
+    if booking.status != BookingStatus.APPROVED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved bookings can be completed.")
+    from datetime import datetime
+    if datetime.utcnow() < booking.return_date:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking cannot be completed before the return date.")
     vehicle = await _load_vehicle_for_stock_update(db, booking.vehicle_id)
     vehicle.vehicle_count += 1
     booking.status = BookingStatus.COMPLETED
     await db.commit()
     await db.refresh(booking)
     await _invalidate_booking_cache(redis, booking)
+    
+    await create_notification(
+        db=db,
+        user_id=booking.customer_id,
+        title="Booking Completed",
+        message=f"Your booking for {booking.vehicle.vehicle_name} has been completed. Thank you for choosing us!",
+        notification_type="booking_completed",
+        reference_id=str(booking.id),
+    )
+    
     logger.info(f"booking_completed booking_id={booking.id} actor_id={actor.id}")
     _queue_notification(background_tasks, "completed", booking)
     return booking

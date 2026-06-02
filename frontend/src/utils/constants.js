@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export const ROLE_DASHBOARD_PATHS = {
-  customer: '/dashboard/customer',
+  customer: '/customer/dashboard',
   vehicle_manager: '/dashboard/manager',
   admin: '/dashboard/admin',
 };

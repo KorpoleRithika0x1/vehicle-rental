@@ -31,7 +31,7 @@ export default function Login() {
     try {
       const response = await login(form);
       const role = response.user.role;
-      const defaultPath = role === 'customer' ? '/' : ROLE_DASHBOARD_PATHS[role];
+      const defaultPath = ROLE_DASHBOARD_PATHS[role] || '/';
       const redirectPath = location.state?.from?.pathname || defaultPath;
       navigate(redirectPath, { replace: true });
     } catch (error) {

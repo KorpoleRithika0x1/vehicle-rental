@@ -73,12 +73,41 @@ async def create_payment_intent(
     # Validate dates and calculate amount
     pickup_date, return_date = validate_booking_dates(payload.pickup_date, payload.return_date)
 
+    existing_active = await db.execute(
+        select(Booking.id).where(
+            Booking.customer_id == current_user.id,
+            Booking.status.in_([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]),
+        )
+    )
+    if existing_active.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "You already have an active booking. You cannot make another booking until "
+                "your current booking is completed or cancelled."
+            ),
+        )
+
     vehicle_result = await db.execute(select(Vehicle).where(Vehicle.id == payload.vehicle_id))
     vehicle = vehicle_result.scalar_one_or_none()
     if not vehicle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found.")
-    if not vehicle.availability_status or vehicle.vehicle_count == 0:
+    if not vehicle.availability_status:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vehicle is not available.")
+
+    overlap = await db.execute(
+        select(Booking.id).where(
+            Booking.vehicle_id == payload.vehicle_id,
+            Booking.status.in_([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]),
+            Booking.pickup_date < return_date,
+            Booking.return_date > pickup_date,
+        )
+    )
+    if overlap.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This vehicle is not available for your selected dates. Please choose different dates.",
+        )
 
     days = max((return_date.date() - pickup_date.date()).days, 1)
     total_inr = Decimal(vehicle.rental_price_per_day) * days

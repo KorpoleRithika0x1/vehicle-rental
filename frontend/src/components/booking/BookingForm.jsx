@@ -1,6 +1,6 @@
 import { differenceInCalendarDays } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useBooking } from '../../hooks/useBooking';
@@ -31,12 +31,30 @@ export default function BookingForm({ vehicle, availability, disabled = false })
 
   const totalPrice = useMemo(() => totalDays * Number(vehicle.rental_price_per_day || 0), [totalDays, vehicle.rental_price_per_day]);
   const stockCount = Number(vehicle.vehicle_count ?? 0);
-  const isOutOfStock = !vehicle.availability_status || stockCount === 0;
+  const isManuallyUnavailable = !vehicle.availability_status;
+  const hasOverlap = useMemo(
+    () => Boolean(pickupDate && returnDate && blockedRanges.some((range) => pickupDate < range.end && returnDate > range.start)),
+    [blockedRanges, pickupDate, returnDate]
+  );
+
+  useEffect(() => {
+    if (!pickupDate || !returnDate) return;
+    if (returnDate <= pickupDate) return;
+    if (hasOverlap) {
+      setInlineError('This vehicle is not available for your selected dates. Please choose different dates.');
+    } else if (inlineError === 'This vehicle is not available for your selected dates. Please choose different dates.') {
+      setInlineError('');
+    }
+  }, [hasOverlap, pickupDate, returnDate, inlineError]);
 
   async function handleSubmit(event) {
     event.preventDefault();
     if (!pickupDate || !returnDate) {
       setInlineError('Please select both pickup and return dates.');
+      return;
+    }
+    if (hasOverlap) {
+      setInlineError('This vehicle is not available for your selected dates. Please choose different dates.');
       return;
     }
 
@@ -52,7 +70,7 @@ export default function BookingForm({ vehicle, availability, disabled = false })
     } catch (error) {
       setInlineError(
         error.statusCode === 409
-          ? 'Vehicle is currently being booked. Try again in a moment.'
+          ? error.normalizedMessage || 'This vehicle is not available for your selected dates. Please choose different dates.'
           : error.normalizedMessage
       );
     } finally {
@@ -78,8 +96,8 @@ export default function BookingForm({ vehicle, availability, disabled = false })
       <div className="rounded-2xl bg-slate-50 p-4">
         <div className="mb-3 flex items-center justify-between text-sm text-slate-500">
           <span>Stock</span>
-          <span className={isOutOfStock ? 'font-semibold text-rose-600' : stockCount === 1 ? 'font-semibold text-amber-600' : 'font-semibold text-emerald-600'}>
-            {isOutOfStock ? 'Out of stock' : stockCount === 1 ? 'Low stock — 1 left' : `${stockCount} available`}
+          <span className={isManuallyUnavailable ? 'font-semibold text-rose-600' : stockCount === 1 ? 'font-semibold text-amber-600' : 'font-semibold text-emerald-600'}>
+            {isManuallyUnavailable ? 'Unavailable' : stockCount === 1 ? 'Low stock — 1 left' : `${stockCount} available`}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm text-slate-500">
@@ -105,10 +123,10 @@ export default function BookingForm({ vehicle, availability, disabled = false })
 
       <button
         type="submit"
-        disabled={disabled || isSubmitting || isOutOfStock}
+        disabled={disabled || isSubmitting || isManuallyUnavailable || hasOverlap}
         className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isOutOfStock ? 'Out of Stock' : isSubmitting ? 'Submitting booking...' : 'Confirm Booking'}
+        {isManuallyUnavailable ? 'Unavailable' : isSubmitting ? 'Submitting booking...' : 'Confirm Booking'}
       </button>
     </form>
   );

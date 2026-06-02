@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -166,6 +166,14 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const { registerCustomer } = useAuth();
+  const pendingKey = 'customer_registration_pending';
+  const pendingEmailKey = 'customer_registration_pending_email';
+
+  useEffect(() => {
+    if (sessionStorage.getItem(pendingKey) === 'true') {
+      setSubmitted(true);
+    }
+  }, []);
 
   function handleChange(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -188,6 +196,8 @@ export default function Register() {
     setIsSubmitting(true);
     try {
       await registerCustomer({ ...form, license_image: licenseFile, live_photo: livePhotoFile });
+      sessionStorage.setItem(pendingKey, 'true');
+      sessionStorage.setItem(pendingEmailKey, form.email.trim().toLowerCase());
       setSubmitted(true);
     } catch (error) {
       setErrors({ general: error.normalizedMessage || 'Registration failed. Please try again.' });
@@ -208,6 +218,11 @@ export default function Register() {
           <h2 className="font-heading text-3xl text-ink">Verification Submitted</h2>
           <p className="mt-4 text-slate-600">
             Your account is under review. A manager will verify your license and live photo before approving access.
+          </p>
+          <p className="mt-2 text-sm text-slate-500">
+            {sessionStorage.getItem(pendingEmailKey)
+              ? `We have received the request for ${sessionStorage.getItem(pendingEmailKey)}.`
+              : 'You can safely close this page and come back later.'}
           </p>
           <p className="mt-2 text-sm text-slate-500">You will receive access once your account is approved.</p>
           <Link to="/login" className="mt-8 inline-block rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white">

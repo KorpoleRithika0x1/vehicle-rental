@@ -4,6 +4,7 @@ import { CardElement, Elements, useElements, useStripe } from '@stripe/react-str
 import { CheckCircle, X } from 'lucide-react';
 
 import { confirmPayment, createPaymentIntent } from '../../api/payments';
+import { useUiStore } from '../../store/uiStore';
 
 // Load Stripe once outside component to avoid re-instantiation
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -30,6 +31,7 @@ function formatINR(paise) {
 function CheckoutForm({ intent, bookingMeta, onSuccess, onClose }) {
   const stripe = useStripe();
   const elements = useElements();
+  const showToast = useUiStore((state) => state.showToast);
   const [isPaying, setIsPaying] = useState(false);
   const [stripeError, setStripeError] = useState('');
   const [confirmed, setConfirmed] = useState(null); // { booking_id }
@@ -69,6 +71,9 @@ function CheckoutForm({ intent, bookingMeta, onSuccess, onClose }) {
       setConfirmed(result);
       onSuccess?.(result);
     } catch (err) {
+      if (err?.statusCode === 409) {
+        showToast({ type: 'error', message: err.normalizedMessage || 'Booking could not be completed.' });
+      }
       setStripeError(err?.normalizedMessage || 'Something went wrong. Please try again.');
       setIsPaying(false);
     }
