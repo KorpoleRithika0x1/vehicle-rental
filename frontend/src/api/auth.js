@@ -51,3 +51,8 @@ export async function uploadLicenseDocument(file) {
   });
   return data;
 }
+
+export async function changePassword(payload) {
+  const { data } = await apiClient.put('/auth/profile/password', payload);
+  return data;
+}

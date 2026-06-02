@@ -49,6 +49,18 @@ def require_role(*roles: UserRole) -> Callable:
     return role_checker
 
 
+async def get_optional_user(
+    db: DBSession,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> User | None:
+    if credentials is None:
+        return None
+    try:
+        return await get_current_user(db, credentials)
+    except HTTPException:
+        return None
+
+
 def pagination_params(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=12, ge=1, le=50),

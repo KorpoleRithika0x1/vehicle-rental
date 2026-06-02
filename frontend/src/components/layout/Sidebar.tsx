@@ -23,10 +23,9 @@ const LINK_ICONS = {
   '/dashboard/manager/vehicles/add': PlusSquare,
   '/dashboard/manager/vehicles': Car,
   '/dashboard/manager/bookings': ClipboardList,
-  '/dashboard/manager/verifications': ShieldCheck,
+  '/dashboard/manager/profile': UserCircle,
   '/dashboard/customer': LayoutDashboard,
   '/customer/dashboard': LayoutDashboard,
-  '/dashboard/customer': LayoutDashboard,
   '/customer/vehicles': Car,
   '/vehicles': Car,
   '/customer/bookings': CalendarCheck,
@@ -34,6 +33,7 @@ const LINK_ICONS = {
   '/customer/profile': UserCircle,
   '/booking/history': ClipboardList,
   '/dashboard/stats': BarChart2,
+  '/profile': UserCircle,
 };
 
 const ROLE_DEFAULT_LINKS = {
@@ -41,19 +41,19 @@ const ROLE_DEFAULT_LINKS = {
     { label: 'Dashboard',       to: '/customer/dashboard',  end: true },
     { label: 'Browse Vehicles', to: '/customer/vehicles' },
     { label: 'My Bookings',     to: '/customer/bookings' },
-    { label: 'Profile',         to: '/customer/profile' },
+    { label: 'Update Profile',  to: '/customer/profile' },
   ],
   vehicle_manager: [
-    { label: 'Dashboard', to: '/dashboard/manager', end: true },
-    { label: 'Add Car', to: '/dashboard/manager/vehicles/add', end: true },
-    { label: 'Manage Cars', to: '/dashboard/manager/vehicles', end: true },
+    { label: 'Dashboard',       to: '/dashboard/manager',               end: true },
+    { label: 'Add Car',         to: '/dashboard/manager/vehicles/add',  end: true },
+    { label: 'Manage Cars',     to: '/dashboard/manager/vehicles',      end: true },
     { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
-    { label: 'Verifications', to: '/dashboard/manager/verifications' },
+    { label: 'Update Profile',  to: '/dashboard/manager/profile' },
   ],
   admin: [
-    { label: 'Dashboard', to: '/dashboard/admin', end: true },
-    { label: 'Manage Users', to: '/dashboard/admin/users' },
-    { label: 'Manage Managers', to: '/dashboard/admin/managers' },
+    { label: 'Dashboard',             to: '/dashboard/admin',          end: true },
+    { label: 'Manage Users',          to: '/dashboard/admin/users' },
+    { label: 'Manage Managers',       to: '/dashboard/admin/managers' },
     { label: 'License Verifications', to: '/dashboard/admin/licenses' },
   ],
 };
@@ -77,15 +77,14 @@ export default function Sidebar({
           type="button"
           onClick={() => fileInputRef?.current?.click()}
           disabled={!onProfileImageChange || isUploadingProfileImage}
-          className="group relative mb-4 block h-20 w-20 rounded-full disabled:cursor-default"
+          className="group relative mb-4 block h-24 w-24 rounded-full disabled:cursor-default"
           title={onProfileImageChange ? 'Update profile image' : undefined}
         >
-          {/* Always circular clip */}
-          <span className="block h-20 w-20 overflow-hidden rounded-full ring-2 ring-brand/20">
+          <span className="block h-24 w-24 overflow-hidden rounded-full ring-2 ring-brand/20">
             {user?.profile_image_url ? (
-              <img src={user.profile_image_url} alt="Profile" className="h-full w-full object-cover" />
+              <img src={user.profile_image_url} alt="Profile" className="h-full w-full rounded-full object-cover" />
             ) : (
-              <span className="flex h-full w-full items-center justify-center bg-brand/10 text-3xl font-bold text-brand">
+              <span className="flex h-full w-full items-center justify-center rounded-full bg-brand/10 text-3xl font-bold text-brand">
                 {(user?.name || 'U').charAt(0).toUpperCase()}
               </span>
             )}
@@ -125,7 +124,7 @@ export default function Sidebar({
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <span className="absolute right-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-l-full bg-brand" />
+                    <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand" />
                   )}
                   <Icon
                     className={`h-5 w-5 shrink-0 ${
@@ -144,9 +143,9 @@ export default function Sidebar({
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+          className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
         >
-          <LogOut className="h-5 w-5 shrink-0" />
+          <LogOut className="h-5 w-5 shrink-0 text-slate-400 transition group-hover:text-rose-600" />
           Logout
         </button>
       </div>

@@ -22,6 +22,7 @@ const ManagerDashboard = lazy(() => import('../pages/dashboard/ManagerDashboard'
 const AdminDashboard = lazy(() => import('../pages/dashboard/AdminDashboard'));
 const ManagerVehicles = lazy(() => import('../pages/dashboard/ManagerVehicles'));
 const ManagerBookings = lazy(() => import('../pages/dashboard/ManagerBookings'));
+const ManagerProfile = lazy(() => import('../pages/dashboard/ManagerProfile'));
 const AdminUsers = lazy(() => import('../pages/dashboard/AdminUsers'));
 const AdminManagers = lazy(() => import('../pages/dashboard/AdminManagers'));
 const AdminLicenses = lazy(() => import('../pages/dashboard/AdminLicenses'));
@@ -97,6 +98,7 @@ export default function AppRouter() {
             <Route path="/dashboard/manager/vehicles" element={<ManagerVehicles />} />
             <Route path="/dashboard/manager/bookings" element={<ManagerBookings />} />
             <Route path="/dashboard/manager/verifications" element={<VerificationQueue />} />
+            <Route path="/dashboard/manager/profile" element={<ManagerProfile />} />
           </Route>
 
           <Route element={<RoleGuard roles={['admin']} />}>

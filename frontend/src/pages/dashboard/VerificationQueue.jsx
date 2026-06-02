@@ -121,11 +121,11 @@ export default function VerificationQueue() {
   const [actionLoading, setActionLoading] = useState({}); // { [userId]: true }
 
   const managerLinks = [
-    { label: 'Dashboard', to: '/dashboard/manager', end: true },
-    { label: 'Add Car', to: '/dashboard/manager/vehicles/add', end: true },
-    { label: 'Manage Cars', to: '/dashboard/manager/vehicles', end: true },
+    { label: 'Dashboard',       to: '/dashboard/manager',              end: true },
+    { label: 'Add Car',         to: '/dashboard/manager/vehicles/add', end: true },
+    { label: 'Manage Cars',     to: '/dashboard/manager/vehicles',     end: true },
     { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
-    { label: 'Verifications', to: '/dashboard/manager/verifications' },
+    { label: 'Update Profile',  to: '/dashboard/manager/profile' },
   ];
 
   const adminLinks = [

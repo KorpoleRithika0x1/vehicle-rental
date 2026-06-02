@@ -42,6 +42,7 @@ class RefreshTokenRequest(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
     phone_number: str | None = Field(default=None, max_length=20)
+    email: EmailStr | None = None
     profile_image_url: HttpUrl | None = None
     license_number: str | None = Field(default=None, max_length=50)
     license_document_url: str | None = Field(default=None, max_length=500)
@@ -52,6 +53,11 @@ class ProfileUpdateRequest(BaseModel):
         if value and not PHONE_PATTERN.match(value):
             raise ValueError("Phone number format is invalid.")
         return value
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
 
 
 class RoleUpdateRequest(BaseModel):

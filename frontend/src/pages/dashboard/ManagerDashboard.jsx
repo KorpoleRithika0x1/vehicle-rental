@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { fetchManagerStats } from '../../api/stats';
 import { fetchVehicles } from '../../api/vehicles';
+import { fetchMyRegions } from '../../api/regions';
 import BookingTable from '../../components/dashboard/BookingTable';
 import QuickActions from '../../components/dashboard/QuickActions';
 import RevenueChart from '../../components/dashboard/RevenueChart';
@@ -12,6 +13,25 @@ import Loader from '../../components/common/Loader';
 import VehicleGrid from '../../components/vehicle/VehicleGrid';
 import { useAuth } from '../../hooks/useAuth';
 import { useBooking } from '../../hooks/useBooking';
+import { CITIES } from '../../utils/cities';
+
+const CITY_COLORS = [
+  'bg-blue-100 text-blue-700',
+  'bg-green-100 text-green-700',
+  'bg-purple-100 text-purple-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+  'bg-cyan-100 text-cyan-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-pink-100 text-pink-700',
+  'bg-teal-100 text-teal-700',
+  'bg-orange-100 text-orange-700',
+];
+
+function getCityColor(city) {
+  const index = CITIES.indexOf(city);
+  return CITY_COLORS[index % CITY_COLORS.length];
+}
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
@@ -24,6 +44,7 @@ export default function ManagerDashboard() {
     revenue_trend: [],
   });
   const [vehicles, setVehicles] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -32,10 +53,11 @@ export default function ManagerDashboard() {
     async function loadDashboard() {
       setIsLoading(true);
       try {
-        const [statsResult, vehicleResult, bookingsResult] = await Promise.allSettled([
+        const [statsResult, vehicleResult, bookingsResult, regionsResult] = await Promise.allSettled([
           fetchManagerStats(),
           fetchVehicles({ page: 1, page_size: 50 }),
           fetchHistory({ page_size: 5 }),
+          fetchMyRegions(),
         ]);
         if (!ignore) {
           if (statsResult.status === 'fulfilled') {
@@ -49,6 +71,9 @@ export default function ManagerDashboard() {
           }
           if (vehicleResult.status === 'fulfilled') {
             setVehicles((vehicleResult.value.items || []).filter((vehicle) => vehicle.manager_id === user.id));
+          }
+          if (regionsResult.status === 'fulfilled') {
+            setRegions(regionsResult.value || []);
           }
           if (bookingsResult.status === 'rejected') {
             console.error('Manager booking history failed:', bookingsResult.reason);
@@ -78,9 +103,24 @@ export default function ManagerDashboard() {
         { label: 'Add Car', to: '/dashboard/manager/vehicles/add', end: true },
         { label: 'Manage Cars', to: '/dashboard/manager/vehicles', end: true },
         { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
-        { label: 'Verifications', to: '/dashboard/manager/verifications' },
+        { label: 'Update Profile',  to: '/dashboard/manager/profile' },
       ]}
     >
+      {/* Regions header */}
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-6 py-4">
+        <p className="mb-2 text-sm font-semibold text-slate-600">Your Regions:</p>
+        {regions.length === 0 ? (
+          <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            You have no regions assigned. Contact admin.
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {regions.map((city) => (
+              <span key={city} className={`rounded-full px-3 py-1 text-xs font-semibold ${getCityColor(city)}`}>{city}</span>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="space-y-8">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           <StatCard icon={CarFront} label="Total Cars" value={stats.fleet_size} />

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
-from app.dependencies import get_current_user, require_role
+from app.dependencies import get_optional_user, require_role
 from app.models import User, UserRole
 from app.redis_client import get_redis
 from app.schemas.common import ImageUploadResponse, MessageResponse, PaginatedResponse
@@ -23,6 +23,7 @@ from app.services.vehicle_service import (
     add_vehicle_image,
     create_vehicle,
     delete_vehicle,
+    get_manager_cities,
     get_vehicle_availability,
     get_vehicle_detail,
     list_vehicles,
@@ -60,7 +61,11 @@ async def get_vehicles(
     page_size: int = Query(default=12, ge=1, le=50),
     db: AsyncSession = Depends(get_session),
     redis=Depends(get_redis),
+    current_user: User | None = Depends(get_optional_user),
 ) -> PaginatedResponse[VehicleListItem]:
+    manager_cities: list[str] | None = None
+    if current_user and current_user.role == UserRole.VEHICLE_MANAGER:
+        manager_cities = await get_manager_cities(db, current_user.id)
     data, cache_hit = await list_vehicles(
         db,
         redis,
@@ -73,6 +78,7 @@ async def get_vehicles(
         available_only=available_only,
         page=page,
         page_size=page_size,
+        manager_cities=manager_cities,
     )
     response.headers["X-Cache"] = "HIT" if cache_hit else "MISS"
     return data

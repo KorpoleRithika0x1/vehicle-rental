@@ -84,6 +84,11 @@ async def authenticate_user(db: AsyncSession, payload: LoginRequest) -> TokenRes
 
 async def update_profile(db: AsyncSession, user: User, payload: ProfileUpdateRequest) -> User:
     update_data = payload.model_dump(exclude_unset=True)
+    if "email" in update_data:
+        existing = await db.execute(select(User.id).where(User.email == update_data["email"].lower(), User.id != user.id))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already in use.")
+        update_data["email"] = update_data["email"].lower()
     if "license_number" in update_data or "license_document_url" in update_data:
         user.license_verified = False
     for field, value in update_data.items():

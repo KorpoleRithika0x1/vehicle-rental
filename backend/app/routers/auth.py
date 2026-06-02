@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -6,6 +6,7 @@ from app.dependencies import get_current_user
 from app.models import User, UserRole
 from app.schemas.user import (
     LoginRequest,
+    ChangePasswordRequest,
     ProfileUpdateRequest,
     RefreshTokenRequest,
     RegisterRequest,
@@ -13,9 +14,10 @@ from app.schemas.user import (
     TokenResponse,
     UserResponse,
 )
-from app.schemas.common import ImageUploadResponse
+from app.schemas.common import ImageUploadResponse, MessageResponse
 from app.services.auth_service import authenticate_user, refresh_tokens, register_user, update_profile, register_customer_with_verification
 from app.services.upload_service import upload_image_to_cloudinary
+from app.utils.password import verify_password, hash_password, validate_password_strength
 from app.limiter import limiter
 
 
@@ -113,3 +115,17 @@ async def refresh(
     db: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     return await refresh_tokens(db, payload.refresh_token)
+
+
+@router.put("/profile/password", response_model=MessageResponse)
+async def change_password(
+    payload: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> MessageResponse:
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect.")
+    validate_password_strength(payload.new_password)
+    current_user.password_hash = hash_password(payload.new_password)
+    await db.commit()
+    return MessageResponse(message="Password updated successfully.")

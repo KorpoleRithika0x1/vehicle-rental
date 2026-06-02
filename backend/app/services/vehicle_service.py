@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
-from app.models import Booking, BookingStatus, User, UserRole, Vehicle, VehicleImage
+from app.models import Booking, BookingStatus, ManagerRegion, User, UserRole, Vehicle, VehicleImage
 from app.schemas.common import PaginatedResponse
 from app.schemas.vehicle import (
     AvailabilityResponse,
@@ -94,6 +94,11 @@ def _serialize_vehicle_detail(vehicle: Vehicle) -> dict:
     return jsonable_encoder(payload)
 
 
+async def get_manager_cities(db: AsyncSession, manager_id: int) -> list[str]:
+    result = await db.execute(select(ManagerRegion.city).where(ManagerRegion.manager_id == manager_id))
+    return result.scalars().all()
+
+
 async def list_vehicles(
     db: AsyncSession,
     redis: Redis,
@@ -107,6 +112,7 @@ async def list_vehicles(
     available_only: bool,
     page: int,
     page_size: int,
+    manager_cities: list[str] | None = None,
 ) -> tuple[PaginatedResponse[VehicleListItem], bool]:
     filters = {
         "search": search,
@@ -117,6 +123,7 @@ async def list_vehicles(
         "max_price": str(max_price) if max_price is not None else None,
         "available_only": available_only,
         "page_size": page_size,
+        "manager_cities": sorted(manager_cities) if manager_cities is not None else None,
     }
     cache_key = f"vehicles:list:v2:{page}:{filters_hash(filters)}"
 
@@ -157,6 +164,8 @@ async def list_vehicles(
         if available_only:
             conditions.append(Vehicle.availability_status.is_(True))
             conditions.append(Vehicle.vehicle_count > 0)
+        if manager_cities is not None:
+            conditions.append(Vehicle.city.in_(manager_cities))
 
         base_filters = and_(*conditions) if conditions else None
         count_query = select(func.count(Vehicle.id))
@@ -249,6 +258,14 @@ async def create_vehicle(db: AsyncSession, redis: Redis, payload: VehicleCreateR
     manager_id = actor.id if actor.role == UserRole.VEHICLE_MANAGER else payload.manager_id
     if manager_id is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="manager_id is required for admin-created vehicles.")
+
+    if actor.role == UserRole.VEHICLE_MANAGER:
+        cities = await get_manager_cities(db, actor.id)
+        if cities and payload.city not in cities:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"You are not authorized to manage vehicles in {payload.city}.",
+            )
 
     await _get_manager(db, manager_id)
     vehicle = Vehicle(

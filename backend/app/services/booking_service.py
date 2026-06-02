@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
-from app.models import Booking, BookingStatus, User, UserRole, Vehicle, VehicleImage
+from app.models import Booking, BookingStatus, ManagerRegion, User, UserRole, Vehicle, VehicleImage
 from app.schemas.booking import BookingDetailResponse, BookingListItem
 from app.schemas.common import PaginatedResponse
 from app.services.cache_service import invalidate_pattern
@@ -245,8 +245,14 @@ async def list_bookings(
         query = query.where(Booking.customer_id == actor.id)
         count_query = count_query.where(Booking.customer_id == actor.id)
     elif actor.role == UserRole.VEHICLE_MANAGER:
-        query = query.where(Vehicle.manager_id == actor.id)
-        count_query = count_query.where(Vehicle.manager_id == actor.id)
+        cities_result = await db.execute(select(ManagerRegion.city).where(ManagerRegion.manager_id == actor.id))
+        manager_cities = cities_result.scalars().all()
+        if manager_cities:
+            query = query.where(Vehicle.city.in_(manager_cities))
+            count_query = count_query.where(Vehicle.city.in_(manager_cities))
+        else:
+            query = query.where(Vehicle.manager_id == actor.id)
+            count_query = count_query.where(Vehicle.manager_id == actor.id)
 
     total = await db.scalar(count_query) or 0
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))

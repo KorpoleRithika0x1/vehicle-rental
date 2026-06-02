@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { uploadProfileImage, uploadLicenseDocument, changePassword } from '../../api/auth';
-import DashboardShell from '../../components/dashboard/DashboardShell';
+import { uploadProfileImage, changePassword } from '../../api/auth';
 import Loader from '../../components/common/Loader';
+import DashboardShell from '../../components/dashboard/DashboardShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useUiStore } from '../../store/uiStore';
-import { CUSTOMER_LINKS } from '../dashboard/CustomerDashboard';
 
-export default function CustomerProfilePage() {
+export default function ManagerProfile() {
   const { user, hydrateProfile, updateProfile } = useAuth();
+  const fileInputRef = useRef(null);
   const showToast = useUiStore((state) => state.showToast);
 
   const [form, setForm] = useState({ name: '', email: '', phone_number: '', profile_image_url: '' });
@@ -20,11 +20,6 @@ export default function CustomerProfilePage() {
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [passwordError, setPasswordError] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-
-  const [licenseForm, setLicenseForm] = useState({ license_number: '', license_document_url: '' });
-  const [licenseError, setLicenseError] = useState('');
-  const [isLicenseSubmitting, setIsLicenseSubmitting] = useState(false);
-  const [isUploadingLicense, setIsUploadingLicense] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -39,10 +34,6 @@ export default function CustomerProfilePage() {
             phone_number: profile.phone_number || '',
             profile_image_url: profile.profile_image_url || '',
           });
-          setLicenseForm({
-            license_number: profile.license_number || profile.driving_license_number || '',
-            license_document_url: profile.license_document_url || '',
-          });
         }
       } finally {
         if (!ignore) setIsLoading(false);
@@ -52,39 +43,39 @@ export default function CustomerProfilePage() {
     return () => { ignore = true; };
   }, [hydrateProfile, user]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
     setError('');
     setIsSubmitting(true);
     try {
       await updateProfile({ name: form.name, email: form.email, phone_number: form.phone_number });
       showToast({ type: 'success', message: 'Profile updated successfully.' });
-    } catch (err) {
-      setError(err.normalizedMessage || 'Failed to update profile.');
+    } catch (requestError) {
+      setError(requestError.normalizedMessage || 'Failed to update profile.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  async function handleImageChange(e) {
-    const file = e.target.files?.[0];
+  async function handleImageChange(event) {
+    const file = event.target.files?.[0];
     if (!file) return;
     setIsUploadingImage(true);
     try {
-      const res = await uploadProfileImage(file);
-      setForm((c) => ({ ...c, profile_image_url: res.image_url }));
-      await updateProfile({ profile_image_url: res.image_url });
+      const response = await uploadProfileImage(file);
+      setForm((c) => ({ ...c, profile_image_url: response.image_url }));
+      await updateProfile({ profile_image_url: response.image_url });
       showToast({ type: 'success', message: 'Profile image updated.' });
-    } catch (err) {
-      showToast({ type: 'error', message: err.normalizedMessage || 'Upload failed.' });
+    } catch (requestError) {
+      showToast({ type: 'error', message: requestError.normalizedMessage || 'Failed to upload image.' });
     } finally {
       setIsUploadingImage(false);
-      e.target.value = '';
+      event.target.value = '';
     }
   }
 
-  async function handlePasswordSubmit(e) {
-    e.preventDefault();
+  async function handlePasswordSubmit(event) {
+    event.preventDefault();
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       setPasswordError('New passwords do not match.');
       return;
@@ -99,69 +90,29 @@ export default function CustomerProfilePage() {
       await changePassword({ current_password: passwordForm.current_password, new_password: passwordForm.new_password });
       setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       showToast({ type: 'success', message: 'Password updated successfully.' });
-    } catch (err) {
-      setPasswordError(err.normalizedMessage || 'Failed to change password.');
+    } catch (requestError) {
+      setPasswordError(requestError.normalizedMessage || 'Failed to change password.');
     } finally {
       setIsChangingPassword(false);
     }
   }
 
-  async function handleLicenseSubmit(e) {
-    e.preventDefault();
-    if (!licenseForm.license_number?.trim()) {
-      setLicenseError('License number is required.');
-      return;
-    }
-    setLicenseError('');
-    setIsLicenseSubmitting(true);
-    try {
-      await updateProfile({ license_number: licenseForm.license_number, license_document_url: licenseForm.license_document_url || undefined });
-      showToast({ type: 'success', message: 'License info updated.' });
-    } catch (err) {
-      setLicenseError(err.normalizedMessage || 'Failed to update license info.');
-    } finally {
-      setIsLicenseSubmitting(false);
-    }
-  }
-
-  async function handleLicenseDocumentChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploadingLicense(true);
-    try {
-      const res = await uploadLicenseDocument(file);
-      setLicenseForm((c) => ({ ...c, license_document_url: res.image_url }));
-      await hydrateProfile();
-      showToast({ type: 'success', message: 'License document uploaded.' });
-    } catch (err) {
-      setLicenseError(err.normalizedMessage || 'Failed to upload document.');
-    } finally {
-      setIsUploadingLicense(false);
-      e.target.value = '';
-    }
-  }
-
   if (isLoading) return <Loader label="Loading profile..." fullScreen />;
-
-  let statusText = 'Not Submitted';
-  let badgeColor = 'bg-slate-100 text-slate-700';
-  if (user?.license_verified) {
-    statusText = 'Verified';
-    badgeColor = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-  } else if (user?.license_document_url) {
-    statusText = 'Under Review';
-    badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200';
-  }
 
   return (
     <DashboardShell
       title="Update Profile"
       subtitle="Manage your personal details, contact information and security settings."
-      links={CUSTOMER_LINKS}
+      links={[
+        { label: 'Dashboard',       to: '/dashboard/manager',              end: true },
+        { label: 'Add Car',         to: '/dashboard/manager/vehicles/add', end: true },
+        { label: 'Manage Cars',     to: '/dashboard/manager/vehicles',     end: true },
+        { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
+        { label: 'Update Profile',  to: '/dashboard/manager/profile' },
+      ]}
     >
       <div className="max-w-2xl space-y-8">
-
-        {/* Personal details */}
+        {/* Profile details */}
         <div className="glass-panel p-8">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Profile</p>
           <h2 className="mt-2 font-heading text-3xl text-ink">Personal Details</h2>
@@ -174,12 +125,12 @@ export default function CustomerProfilePage() {
                   <img src={form.profile_image_url} alt="Profile" className="h-16 w-16 rounded-full object-cover" />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10 text-2xl font-bold text-brand">
-                    {form.name?.charAt(0)?.toUpperCase() || 'U'}
+                    {form.name?.charAt(0)?.toUpperCase() || 'M'}
                   </div>
                 )}
                 <label className="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">
                   {isUploadingImage ? 'Uploading...' : 'Upload image'}
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={isUploadingImage} />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={isUploadingImage} />
                 </label>
               </div>
             </div>
@@ -254,51 +205,6 @@ export default function CustomerProfilePage() {
             </button>
           </form>
         </div>
-
-        {/* Driving License */}
-        <div className="glass-panel p-8">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Verification</p>
-              <h2 className="mt-2 font-heading text-3xl text-ink">Driving License</h2>
-            </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${badgeColor}`}>
-              {statusText}
-            </span>
-          </div>
-          <form onSubmit={handleLicenseSubmit} className="mt-6 space-y-5">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-600">License number</label>
-              <input
-                value={licenseForm.license_number}
-                onChange={(e) => setLicenseForm((c) => ({ ...c, license_number: e.target.value }))}
-                placeholder="e.g. DL-12345678"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-600">License document</label>
-              <div className="flex items-center gap-4">
-                {licenseForm.license_document_url ? (
-                  <a href={licenseForm.license_document_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-semibold text-brand hover:bg-slate-200">
-                    View uploaded document
-                  </a>
-                ) : (
-                  <span className="text-sm text-slate-400">No document uploaded yet.</span>
-                )}
-                <label className="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">
-                  {isUploadingLicense ? 'Uploading...' : 'Upload document'}
-                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleLicenseDocumentChange} disabled={isUploadingLicense} />
-                </label>
-              </div>
-            </div>
-            {licenseError ? <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{licenseError}</div> : null}
-            <button type="submit" disabled={isLicenseSubmitting} className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
-              {isLicenseSubmitting ? 'Saving...' : 'Save license info'}
-            </button>
-          </form>
-        </div>
-
       </div>
     </DashboardShell>
   );

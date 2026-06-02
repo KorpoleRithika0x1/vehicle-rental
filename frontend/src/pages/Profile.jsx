@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
 
-import { uploadProfileImage, uploadLicenseDocument } from '../api/auth';
+import { uploadProfileImage, uploadLicenseDocument, changePassword } from '../api/auth';
 import Loader from '../components/common/Loader';
 import { useAuth } from '../hooks/useAuth';
 import { validatePhone } from '../utils/validators';
+import { useUiStore } from '../store/uiStore';
 
 export default function Profile() {
   const { user, hydrateProfile, updateProfile } = useAuth();
-  const [form, setForm] = useState({ name: '', phone_number: '', profile_image_url: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone_number: '', profile_image_url: '' });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const showToast = useUiStore((state) => state.showToast);
+
+  const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [passwordError, setPasswordError] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const [licenseForm, setLicenseForm] = useState({ license_number: '', license_document_url: '' });
   const [licenseError, setLicenseError] = useState('');
@@ -27,6 +33,7 @@ export default function Profile() {
         if (!ignore) {
           setForm({
             name: profile.name,
+            email: profile.email || '',
             phone_number: profile.phone_number || '',
             profile_image_url: profile.profile_image_url || ''
           });
@@ -47,7 +54,7 @@ export default function Profile() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!validatePhone(form.phone_number)) {
+    if (form.phone_number && !validatePhone(form.phone_number)) {
       setError('Phone number format is invalid.');
       return;
     }
@@ -55,6 +62,7 @@ export default function Profile() {
     setIsSubmitting(true);
     try {
       await updateProfile(form);
+      showToast({ type: 'success', message: 'Profile updated successfully.' });
     } catch (requestError) {
       setError(requestError.normalizedMessage);
     } finally {
@@ -71,11 +79,35 @@ export default function Profile() {
       const response = await uploadProfileImage(file);
       setForm((current) => ({ ...current, profile_image_url: response.image_url }));
       await updateProfile({ profile_image_url: response.image_url });
+      showToast({ type: 'success', message: 'Profile image updated.' });
     } catch (requestError) {
       setError(requestError.normalizedMessage);
     } finally {
       setIsUploadingImage(false);
       event.target.value = '';
+    }
+  }
+
+  async function handlePasswordSubmit(event) {
+    event.preventDefault();
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+    if (passwordForm.new_password.length < 8) {
+      setPasswordError('New password must be at least 8 characters.');
+      return;
+    }
+    setPasswordError('');
+    setIsChangingPassword(true);
+    try {
+      await changePassword({ current_password: passwordForm.current_password, new_password: passwordForm.new_password });
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      showToast({ type: 'success', message: 'Password updated successfully.' });
+    } catch (requestError) {
+      setPasswordError(requestError.normalizedMessage || 'Failed to change password.');
+    } finally {
+      setIsChangingPassword(false);
     }
   }
 
@@ -92,6 +124,7 @@ export default function Profile() {
         license_number: licenseForm.license_number,
         license_document_url: licenseForm.license_document_url || undefined,
       });
+      showToast({ type: 'success', message: 'License info updated successfully.' });
     } catch (requestError) {
       setLicenseError(requestError.normalizedMessage || 'Failed to update license info.');
     } finally {
@@ -108,6 +141,7 @@ export default function Profile() {
       const response = await uploadLicenseDocument(file);
       setLicenseForm((current) => ({ ...current, license_document_url: response.image_url }));
       await hydrateProfile();
+      showToast({ type: 'success', message: 'License document uploaded.' });
     } catch (requestError) {
       setLicenseError(requestError.normalizedMessage || 'Failed to upload document.');
     } finally {
@@ -158,15 +192,55 @@ export default function Profile() {
             <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
           </div>
           <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-600">Email address</label>
+            <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
+          </div>
+          <div>
             <label className="mb-2 block text-sm font-semibold text-slate-600">Phone number</label>
             <input value={form.phone_number} onChange={(event) => setForm((current) => ({ ...current, phone_number: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-            Email and role are managed on the backend for security. Contact an administrator for role changes.
           </div>
           {error ? <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
           <button type="submit" disabled={isSubmitting} className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white">
             {isSubmitting ? 'Saving changes...' : 'Save changes'}
+          </button>
+        </form>
+      </div>
+
+      {/* Password Change Card */}
+      <div className="glass-panel p-8">
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Security</p>
+        <h2 className="mt-2 font-heading text-3xl text-ink">Change Password</h2>
+        <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-5">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-600">Current password</label>
+            <input
+              type="password"
+              value={passwordForm.current_password}
+              onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-600">New password</label>
+            <input
+              type="password"
+              value={passwordForm.new_password}
+              onChange={(event) => setPasswordForm((current) => ({ ...current, new_password: event.target.value }))}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-600">Confirm new password</label>
+            <input
+              type="password"
+              value={passwordForm.confirm_password}
+              onChange={(event) => setPasswordForm((current) => ({ ...current, confirm_password: event.target.value }))}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none"
+            />
+          </div>
+          {passwordError ? <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{passwordError}</div> : null}
+          <button type="submit" disabled={isChangingPassword} className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white">
+            {isChangingPassword ? 'Updating...' : 'Update password'}
           </button>
         </form>
       </div>

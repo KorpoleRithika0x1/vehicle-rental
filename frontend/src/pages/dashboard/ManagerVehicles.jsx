@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { createVehicle, deleteVehicle, fetchVehicles, updateVehicle, uploadVehicleImage } from '../../api/vehicles';
+import { fetchMyRegions } from '../../api/regions';
 import Loader from '../../components/common/Loader';
 import DashboardShell from '../../components/dashboard/DashboardShell';
 import { useAuth } from '../../hooks/useAuth';
@@ -106,6 +107,7 @@ export default function ManagerVehicles() {
   const location = useLocation();
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingVehicleId, setEditingVehicleId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,8 +124,12 @@ export default function ManagerVehicles() {
   async function loadVehicles() {
     setIsLoading(true);
     try {
-      const response = await fetchVehicles({ page: 1, page_size: 50 });
+      const [response, myRegions] = await Promise.all([
+        fetchVehicles({ page: 1, page_size: 50 }),
+        fetchMyRegions().catch(() => []),
+      ]);
       setVehicles(response.items);
+      setRegions(myRegions);
       setStockDrafts(Object.fromEntries(response.items.map((vehicle) => [vehicle.id, String(vehicle.vehicle_count ?? 0)])));
     } finally {
       setIsLoading(false);
@@ -311,7 +317,7 @@ export default function ManagerVehicles() {
             <input value={form.seating_capacity} type="number" required onChange={(e) => setForm((c) => ({ ...c, seating_capacity: e.target.value }))} placeholder="Seating capacity" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
             <input value={form.vehicle_count} type="number" min="0" required onChange={(e) => setForm((c) => ({ ...c, vehicle_count: e.target.value }))} placeholder="Vehicle count" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" />
             <select value={form.city} onChange={(e) => setForm((c) => ({ ...c, city: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none">
-              {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {(regions.length > 0 ? regions : CITIES).map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <label className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600">
               <input type="checkbox" checked={form.availability_status} onChange={(e) => setForm((c) => ({ ...c, availability_status: e.target.checked }))} />

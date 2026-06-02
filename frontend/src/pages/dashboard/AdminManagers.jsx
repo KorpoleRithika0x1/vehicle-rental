@@ -2,13 +2,33 @@ import { Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { fetchUsers, updateUserRole, updateUserStatus } from '../../api/users';
+import { fetchManagersWithRegions, grantRegion, revokeRegion } from '../../api/regions';
 import { register } from '../../api/auth';
 import Loader from '../../components/common/Loader';
 import DashboardShell from '../../components/dashboard/DashboardShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useUiStore } from '../../store/uiStore';
+import { CITIES } from '../../utils/cities';
 
 const initialForm = { name: '', email: '', password: '', phone_number: '' };
+
+const CITY_COLORS = [
+  'bg-blue-100 text-blue-700',
+  'bg-green-100 text-green-700',
+  'bg-purple-100 text-purple-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+  'bg-cyan-100 text-cyan-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-pink-100 text-pink-700',
+  'bg-teal-100 text-teal-700',
+  'bg-orange-100 text-orange-700',
+];
+
+function getCityColor(city) {
+  const index = CITIES.indexOf(city);
+  return CITY_COLORS[index % CITY_COLORS.length];
+}
 
 function AddManagerModal({ onClose, onSuccess }) {
   const [form, setForm] = useState(initialForm);
@@ -59,18 +79,73 @@ function AddManagerModal({ onClose, onSuccess }) {
   );
 }
 
+function RegionAssignModal({ managerId, existingRegions, onClose, onSuccess }) {
+  const [selectedCity, setSelectedCity] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const showToast = useUiStore((state) => state.showToast);
+  const availableCities = CITIES.filter((city) => !existingRegions.includes(city));
+
+  async function handleGrant() {
+    if (!selectedCity) return;
+    setIsSaving(true);
+    try {
+      await grantRegion(managerId, selectedCity);
+      showToast({ type: 'success', message: `Granted ${selectedCity} successfully.` });
+      onSuccess();
+    } catch (err) {
+      showToast({ type: 'error', message: err?.normalizedMessage || 'Failed to grant region.' });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <h2 className="text-lg font-semibold text-ink">Assign Region</h2>
+          <button type="button" onClick={onClose} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          {availableCities.length === 0 ? (
+            <p className="text-sm text-slate-500">All regions are already assigned to this manager.</p>
+          ) : (
+            <>
+              <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none">
+                <option value="">Select city</option>
+                {availableCities.map((city) => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={onClose} className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={handleGrant} disabled={!selectedCity || isSaving} className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                  {isSaving ? 'Granting...' : 'Grant Region'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminManagers() {
   const { user: currentUser } = useAuth();
   const [managers, setManagers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showRegionModal, setShowRegionModal] = useState(null);
+  const showToast = useUiStore((state) => state.showToast);
 
   async function loadManagers() {
     setIsLoading(true);
     try {
-      const response = await fetchUsers({ page: 1, page_size: 50 });
-      const filtered = (response.items || []).filter((item) => item.role === 'vehicle_manager' && item.id !== currentUser?.id);
-      setManagers(filtered);
+      const data = await fetchManagersWithRegions();
+      setManagers(data.filter((item) => item.id !== currentUser?.id));
     } finally {
       setIsLoading(false);
     }
@@ -90,6 +165,16 @@ export default function AdminManagers() {
     await loadManagers();
   }
 
+  async function handleRevokeRegion(managerId, city) {
+    try {
+      await revokeRegion(managerId, city);
+      showToast({ type: 'success', message: `Revoked ${city} successfully.` });
+      await loadManagers();
+    } catch (err) {
+      showToast({ type: 'error', message: err?.normalizedMessage || 'Failed to revoke region.' });
+    }
+  }
+
   if (isLoading) {
     return <Loader label="Loading managers..." fullScreen />;
   }
@@ -106,10 +191,11 @@ export default function AdminManagers() {
       ]}
     >
       {showAddModal ? <AddManagerModal onClose={() => setShowAddModal(false)} onSuccess={() => { setShowAddModal(false); loadManagers(); }} /> : null}
+      {showRegionModal ? <RegionAssignModal managerId={showRegionModal.id} existingRegions={showRegionModal.regions} onClose={() => setShowRegionModal(null)} onSuccess={() => { setShowRegionModal(null); loadManagers(); }} /> : null}
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-heading text-3xl text-ink">Manage Managers</h1>
-          <p className="mt-1 text-sm text-slate-500">View and control only vehicle manager accounts.</p>
+          <p className="mt-1 text-sm text-slate-500">Control manager accounts and assign regional access.</p>
         </div>
         <button type="button" onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
           <Plus className="h-4 w-4" />
@@ -119,27 +205,35 @@ export default function AdminManagers() {
       <div className="space-y-4">
         {managers.map((manager) => (
           <div key={manager.id} className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex-1">
                 <h2 className="font-heading text-2xl text-ink">{manager.name}</h2>
                 <p className="text-sm text-slate-500">{manager.email}</p>
-                <p className="mt-2 text-xs uppercase tracking-[0.25em] text-brand">{manager.role}</p>
-                <p className={`mt-1 text-xs font-semibold ${manager.is_active ? 'text-emerald-600' : 'text-rose-600'}`}>{manager.is_active ? 'Active' : 'Blocked'}</p>
+                <div className="mt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-600">Assigned Regions:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {manager.regions.length === 0 ? (
+                      <span className="text-xs text-slate-400">No regions assigned</span>
+                    ) : (
+                      manager.regions.map((city) => (
+                        <span key={city} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${getCityColor(city)}`}>
+                          {city}
+                          <button type="button" onClick={() => handleRevokeRegion(manager.id, city)} className="hover:opacity-70">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
-                <select value={manager.role} onChange={(event) => handleRoleChange(manager.id, event.target.value)} className="rounded-full border border-slate-200 px-4 py-2 text-sm">
-                  {['vehicle_manager', 'customer', 'admin'].map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
                 <button
                   type="button"
-                  onClick={() => handleStatusToggle(manager)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${manager.is_active ? 'border border-rose-200 text-rose-600' : 'border border-emerald-200 text-emerald-600'}`}
+                  onClick={() => setShowRegionModal({ id: manager.id, regions: manager.regions })}
+                  className="rounded-full border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand hover:text-white"
                 >
-                  {manager.is_active ? 'Block' : 'Unblock'}
+                  Assign Region
                 </button>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { uploadProfileImage } from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
@@ -34,12 +34,12 @@ export default function DashboardShell({ title, subtitle, links, children }) {
     <div className="flex h-screen flex-col overflow-hidden bg-white">
       {/* Top bar */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-8 py-4">
-        <Link to="/" className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-sm font-bold text-white">
             VR
           </div>
           <span className="text-lg font-bold text-brand">Veloce Rentals</span>
-        </Link>
+        </div>
         <NotificationBell />
       </div>
 

@@ -15,7 +15,7 @@ export const CUSTOMER_LINKS = [
   { label: 'Dashboard',       to: '/customer/dashboard',  end: true },
   { label: 'Browse Vehicles', to: '/customer/vehicles' },
   { label: 'My Bookings',     to: '/customer/bookings' },
-  { label: 'Profile',         to: '/customer/profile' },
+  { label: 'Update Profile',  to: '/customer/profile' },
 ];
 
 export default function CustomerDashboard() {
