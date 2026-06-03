@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { fetchCustomerStats } from '../../api/stats';
 import BookingTable from '../../components/dashboard/BookingTable';
+import ChatBot from '../../components/dashboard/ChatBot';
 import DashboardShell from '../../components/dashboard/DashboardShell';
 import QuickActions from '../../components/dashboard/QuickActions';
 import StatCard from '../../components/dashboard/StatCard';
@@ -108,6 +109,7 @@ export default function CustomerDashboard() {
           />
         </div>
       </div>
+      <ChatBot />
     </DashboardShell>
   );
 }

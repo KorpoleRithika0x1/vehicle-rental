@@ -8,6 +8,7 @@ venv/
 backend/.env
 frontend/.env
 backend/logs/
+backend/data/
 backend/.coverage
 htmlcov/
 frontend/node_modules/

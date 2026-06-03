@@ -48,6 +48,17 @@ class Settings(BaseSettings):
     smtp_password: str | None = Field(default=None, alias="SMTP_PASSWORD")
     smtp_from_email: str | None = Field(default=None, alias="SMTP_FROM_EMAIL")
     frontend_url: str = Field(default="http://localhost:3000", alias="FRONTEND_URL")
+    openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")
+    openrouter_base_url: str = Field(default="https://openrouter.ai/api/v1", alias="OPENROUTER_BASE_URL")
+    openrouter_chat_model: str = Field(
+        default="google/gemini-2.5-flash",
+        alias="OPENROUTER_CHAT_MODEL",
+    )
+    openrouter_embedding_model: str = Field(
+        default="openai/text-embedding-3-small",
+        alias="OPENROUTER_EMBEDDING_MODEL",
+    )
+    chroma_persist_dir: Path = Field(default=BASE_DIR / "data" / "chroma", alias="CHROMA_PERSIST_DIR")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
