@@ -15,6 +15,7 @@ from app.schemas.verification import (
     VerificationStatsResponse,
 )
 from app.services.email_service import send_account_approved_email
+from loguru import logger
 
 
 router = APIRouter(prefix="/verification", tags=["Verification"])
@@ -113,7 +114,7 @@ async def approve_account(
             customer_name=user.name,
         )
     except Exception as e:
-        print(f"Email send failed for {user.email}: {e}")
+        logger.error(f"Email send failed for {user.email}: {e}")
     
     return {"message": "Account approved. Customer can now log in."}
 
