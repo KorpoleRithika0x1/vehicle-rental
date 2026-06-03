@@ -125,14 +125,17 @@ export default function VerificationQueue() {
     { label: 'Add Car',         to: '/dashboard/manager/vehicles/add', end: true },
     { label: 'Manage Cars',     to: '/dashboard/manager/vehicles',     end: true },
     { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
+    { label: 'Reviews',         to: '/dashboard/manager/reviews' },
     { label: 'Update Profile',  to: '/dashboard/manager/profile' },
   ];
 
   const adminLinks = [
-    { label: 'Dashboard', to: '/dashboard/admin', end: true },
-    { label: 'Manage Users', to: '/dashboard/admin/users' },
-    { label: 'Manage Managers', to: '/dashboard/admin/managers' },
+    { label: 'Dashboard',             to: '/dashboard/admin',          end: true },
+    { label: 'Manage Users',          to: '/dashboard/admin/users' },
+    { label: 'Manage Managers',       to: '/dashboard/admin/managers' },
     { label: 'License Verifications', to: '/dashboard/admin/licenses' },
+    { label: 'Reports',               to: '/dashboard/admin/reports' },
+    { label: 'Reviews',               to: '/dashboard/admin/reviews' },
   ];
 
   const load = useCallback(async () => {

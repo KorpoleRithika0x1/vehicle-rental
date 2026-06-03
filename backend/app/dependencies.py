@@ -37,6 +37,11 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None or user.account_status != AccountStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive.")
+    
+    # Check if user is blocked by admin
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your account has been blocked.")
+    
     return user
 
 

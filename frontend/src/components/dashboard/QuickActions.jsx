@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 export default function QuickActions({ actions = [] }) {
   return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
+    <div className="flex h-full flex-col rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
       <h3 className="font-heading text-2xl text-ink">Quick Actions</h3>
       <div className="mt-5 grid gap-3">
         {actions.map((action) =>

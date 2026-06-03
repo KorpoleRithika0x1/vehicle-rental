@@ -74,6 +74,8 @@ class CustomerStatsResponse(BaseModel):
     pending_bookings: int
     completed_bookings: int
     total_spent: float
+    booking_trend: list[RevenuePoint] = []
+    spending_trend: list[RevenuePoint] = []
 
 
 class ORMBaseModel(BaseModel):

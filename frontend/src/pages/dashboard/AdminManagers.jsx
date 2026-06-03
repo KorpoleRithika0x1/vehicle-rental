@@ -188,6 +188,8 @@ export default function AdminManagers() {
         { label: 'Manage Users', to: '/dashboard/admin/users' },
         { label: 'Manage Managers', to: '/dashboard/admin/managers' },
         { label: 'License Verifications', to: '/dashboard/admin/licenses' },
+        { label: 'Reports', to: '/dashboard/admin/reports' },
+        { label: 'Reviews', to: '/dashboard/admin/reviews' },
       ]}
     >
       {showAddModal ? <AddManagerModal onClose={() => setShowAddModal(false)} onSuccess={() => { setShowAddModal(false); loadManagers(); }} /> : null}

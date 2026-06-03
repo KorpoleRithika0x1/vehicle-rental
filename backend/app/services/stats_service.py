@@ -174,10 +174,46 @@ async def get_customer_stats(db: AsyncSession, customer_id: int) -> CustomerStat
             Booking.status.in_([BookingStatus.ACTIVE, BookingStatus.COMPLETED]),
         )
     )
+
+    # Last 6 months booking count trend
+    booking_trend_result = await db.execute(
+        select(
+            func.date_format(Booking.created_at, "%Y-%m").label("bucket"),
+            func.count(Booking.id).label("count"),
+        )
+        .where(Booking.customer_id == customer_id)
+        .group_by("bucket")
+        .order_by("bucket")
+    )
+    booking_trend = [
+        RevenuePoint(label=row.bucket, revenue=float(row.count))
+        for row in booking_trend_result.all()[-6:]
+    ]
+
+    # Last 6 months spending trend
+    spending_trend_result = await db.execute(
+        select(
+            func.date_format(Booking.created_at, "%Y-%m").label("bucket"),
+            func.coalesce(func.sum(Booking.total_amount), 0).label("amount"),
+        )
+        .where(
+            Booking.customer_id == customer_id,
+            Booking.status.in_([BookingStatus.APPROVED, BookingStatus.ACTIVE, BookingStatus.COMPLETED]),
+        )
+        .group_by("bucket")
+        .order_by("bucket")
+    )
+    spending_trend = [
+        RevenuePoint(label=row.bucket, revenue=float(row.amount))
+        for row in spending_trend_result.all()[-6:]
+    ]
+
     return CustomerStatsResponse(
         total_bookings=total_bookings,
         active_bookings=active_bookings,
         pending_bookings=pending_bookings,
         completed_bookings=completed_bookings,
         total_spent=float(total_spent or 0),
+        booking_trend=booking_trend,
+        spending_trend=spending_trend,
     )

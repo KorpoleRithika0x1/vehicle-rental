@@ -3,9 +3,11 @@ import {
   CalendarCheck,
   Car,
   ClipboardList,
+  FileBarChart2,
   History,
   LayoutDashboard,
   LogOut,
+  MessageSquare,
   Pencil,
   PlusSquare,
   ShieldCheck,
@@ -19,11 +21,14 @@ const LINK_ICONS = {
   '/dashboard/admin/users': Users,
   '/dashboard/admin/managers': Users,
   '/dashboard/admin/licenses': ShieldCheck,
+  '/dashboard/admin/reports': FileBarChart2,
+  '/dashboard/admin/reviews': MessageSquare,
   '/dashboard/manager': LayoutDashboard,
   '/dashboard/manager/vehicles/add': PlusSquare,
   '/dashboard/manager/vehicles': Car,
   '/dashboard/manager/bookings': ClipboardList,
   '/dashboard/manager/profile': UserCircle,
+  '/dashboard/manager/reviews': MessageSquare,
   '/dashboard/customer': LayoutDashboard,
   '/customer/dashboard': LayoutDashboard,
   '/customer/vehicles': Car,
@@ -48,6 +53,7 @@ const ROLE_DEFAULT_LINKS = {
     { label: 'Add Car',         to: '/dashboard/manager/vehicles/add',  end: true },
     { label: 'Manage Cars',     to: '/dashboard/manager/vehicles',      end: true },
     { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
+    { label: 'Reviews',         to: '/dashboard/manager/reviews' },
     { label: 'Update Profile',  to: '/dashboard/manager/profile' },
   ],
   admin: [
@@ -55,6 +61,8 @@ const ROLE_DEFAULT_LINKS = {
     { label: 'Manage Users',          to: '/dashboard/admin/users' },
     { label: 'Manage Managers',       to: '/dashboard/admin/managers' },
     { label: 'License Verifications', to: '/dashboard/admin/licenses' },
+    { label: 'Reports',               to: '/dashboard/admin/reports' },
+    { label: 'Reviews',               to: '/dashboard/admin/reviews' },
   ],
 };
 
@@ -70,7 +78,7 @@ export default function Sidebar({
   const navLinks = links?.length ? links : ROLE_DEFAULT_LINKS[role] || [];
 
   return (
-    <aside className="flex w-[260px] shrink-0 flex-col border-r border-slate-100 bg-white">
+    <aside className="flex w-[260px] shrink-0 flex-col border-r-2 border-slate-200 bg-white">
       {/* Profile section */}
       <div className="flex flex-col items-center border-b border-slate-100 px-6 pb-6 pt-8">
         <button
@@ -143,9 +151,9 @@ export default function Sidebar({
         <button
           type="button"
           onClick={onLogout}
-          className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+          className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-rose-500 transition hover:bg-rose-50 hover:text-rose-600"
         >
-          <LogOut className="h-5 w-5 shrink-0 text-slate-400 transition group-hover:text-rose-600" />
+          <LogOut className="h-5 w-5 shrink-0 text-rose-500 transition group-hover:text-rose-600" />
           Logout
         </button>
       </div>

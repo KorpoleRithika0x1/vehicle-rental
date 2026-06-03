@@ -74,6 +74,7 @@ class UserResponse(ORMBaseModel):
     email: EmailStr
     role: UserRole
     account_status: AccountStatus
+    is_active: bool = True
     phone_number: str | None = None
     profile_image_url: str | None = None
     license_image_url: str | None = None
@@ -87,10 +88,6 @@ class UserResponse(ORMBaseModel):
     license_verified: bool = False
     license_document_url: str | None = None
     license_number: str | None = None
-    
-    @property
-    def is_active(self) -> bool:
-        return self.account_status == AccountStatus.ACTIVE
 
 
 class TokenResponse(BaseModel):

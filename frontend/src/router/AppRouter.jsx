@@ -27,6 +27,8 @@ const AdminUsers = lazy(() => import('../pages/dashboard/AdminUsers'));
 const AdminManagers = lazy(() => import('../pages/dashboard/AdminManagers'));
 const AdminLicenses = lazy(() => import('../pages/dashboard/AdminLicenses'));
 const VerificationQueue = lazy(() => import('../pages/dashboard/VerificationQueue'));
+const AdminReports = lazy(() => import('../pages/dashboard/AdminReports'));
+const AdminReviews = lazy(() => import('../pages/dashboard/AdminReviews'));
 const Profile = lazy(() => import('../pages/Profile'));
 const Forbidden = lazy(() => import('../pages/Forbidden'));
 const NotFound = lazy(() => import('../pages/NotFound'));
@@ -99,6 +101,7 @@ export default function AppRouter() {
             <Route path="/dashboard/manager/bookings" element={<ManagerBookings />} />
             <Route path="/dashboard/manager/verifications" element={<VerificationQueue />} />
             <Route path="/dashboard/manager/profile" element={<ManagerProfile />} />
+            <Route path="/dashboard/manager/reviews" element={<AdminReviews />} />
           </Route>
 
           <Route element={<RoleGuard roles={['admin']} />}>
@@ -106,6 +109,8 @@ export default function AppRouter() {
             <Route path="/dashboard/admin/users" element={<AdminUsers />} />
             <Route path="/dashboard/admin/managers" element={<AdminManagers />} />
             <Route path="/dashboard/admin/licenses" element={<VerificationQueue />} />
+            <Route path="/dashboard/admin/reports" element={<AdminReports />} />
+            <Route path="/dashboard/admin/reviews" element={<AdminReviews />} />
           </Route>
         </Route>
 

@@ -73,19 +73,18 @@ async def create_payment_intent(
     # Validate dates and calculate amount
     pickup_date, return_date = validate_booking_dates(payload.pickup_date, payload.return_date)
 
-    existing_active = await db.execute(
+    existing_overlap = await db.execute(
         select(Booking.id).where(
             Booking.customer_id == current_user.id,
             Booking.status.in_([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]),
+            Booking.pickup_date < return_date,
+            Booking.return_date > pickup_date,
         )
     )
-    if existing_active.scalar_one_or_none():
+    if existing_overlap.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "You already have an active booking. You cannot make another booking until "
-                "your current booking is completed or cancelled."
-            ),
+            detail="You already have a booking that overlaps with these dates.",
         )
 
     vehicle_result = await db.execute(select(Vehicle).where(Vehicle.id == payload.vehicle_id))

@@ -4,11 +4,14 @@ import { fetchUsers, updateUserRole, updateUserStatus } from '../../api/users';
 import Loader from '../../components/common/Loader';
 import DashboardShell from '../../components/dashboard/DashboardShell';
 import { useAuth } from '../../hooks/useAuth';
+import { useUiStore } from '../../store/uiStore';
 
 export default function AdminUsers() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusUpdating, setStatusUpdating] = useState(null);
+  const showToast = useUiStore((state) => state.showToast);
 
   async function loadUsers() {
     setIsLoading(true);
@@ -26,13 +29,27 @@ export default function AdminUsers() {
   }, []);
 
   async function handleRoleChange(userId, role) {
-    await updateUserRole(userId, { role });
-    await loadUsers();
+    try {
+      await updateUserRole(userId, { role });
+      showToast({ type: 'success', message: 'User role updated successfully.' });
+      await loadUsers();
+    } catch (error) {
+      showToast({ type: 'error', message: error?.normalizedMessage || 'Failed to update user role.' });
+    }
   }
 
   async function handleStatusToggle(user) {
-    await updateUserStatus(user.id, { is_active: !user.is_active });
-    await loadUsers();
+    setStatusUpdating(user.id);
+    try {
+      await updateUserStatus(user.id, { is_active: !user.is_active });
+      const action = !user.is_active ? 'unblocked' : 'blocked';
+      showToast({ type: 'success', message: `User ${action} successfully.` });
+      await loadUsers();
+    } catch (error) {
+      showToast({ type: 'error', message: error?.normalizedMessage || 'Failed to update user status.' });
+    } finally {
+      setStatusUpdating(null);
+    }
   }
 
   if (isLoading) {
@@ -48,6 +65,8 @@ export default function AdminUsers() {
         { label: 'Manage Users', to: '/dashboard/admin/users' },
         { label: 'Manage Managers', to: '/dashboard/admin/managers' },
         { label: 'License Verifications', to: '/dashboard/admin/licenses' },
+        { label: 'Reports', to: '/dashboard/admin/reports' },
+        { label: 'Reviews', to: '/dashboard/admin/reviews' },
       ]}
     >
       <div className="space-y-4">
@@ -71,9 +90,10 @@ export default function AdminUsers() {
                 <button
                   type="button"
                   onClick={() => handleStatusToggle(user)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${user.is_active ? 'border border-rose-200 text-rose-600' : 'border border-emerald-200 text-emerald-600'}`}
+                  disabled={statusUpdating === user.id}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${user.is_active ? 'border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50' : 'border border-emerald-200 text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50'}`}
                 >
-                  {user.is_active ? 'Block' : 'Unblock'}
+                  {statusUpdating === user.id ? 'Updating...' : (user.is_active ? 'Block' : 'Unblock')}
                 </button>
               </div>
             </div>

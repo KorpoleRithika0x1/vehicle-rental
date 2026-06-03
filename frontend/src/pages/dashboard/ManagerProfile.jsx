@@ -108,6 +108,7 @@ export default function ManagerProfile() {
         { label: 'Add Car',         to: '/dashboard/manager/vehicles/add', end: true },
         { label: 'Manage Cars',     to: '/dashboard/manager/vehicles',     end: true },
         { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
+        { label: 'Reviews',         to: '/dashboard/manager/reviews' },
         { label: 'Update Profile',  to: '/dashboard/manager/profile' },
       ]}
     >

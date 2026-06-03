@@ -1,5 +1,9 @@
 import { CarFront, CircleDollarSign, Clock3, Receipt } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import {
+  Bar, BarChart, CartesianGrid, Cell,
+  Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
 
 import { fetchCustomerStats } from '../../api/stats';
 import BookingTable from '../../components/dashboard/BookingTable';
@@ -11,6 +15,8 @@ import Loader from '../../components/common/Loader';
 import { useAuth } from '../../hooks/useAuth';
 import { useBooking } from '../../hooks/useBooking';
 import { formatCurrency } from '../../utils/formatCurrency';
+
+const BAR_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export const CUSTOMER_LINKS = [
   { label: 'Dashboard',       to: '/customer/dashboard',  end: true },
@@ -90,6 +96,60 @@ export default function CustomerDashboard() {
           />
         </div>
 
+        {/* Charts row — above recent bookings */}
+        <div className="grid gap-6 xl:grid-cols-2">
+          {/* Line chart — bookings per month */}
+          <div className="rounded-[1.5rem] border border-slate-200 p-6">
+            <h2 className="mb-1 font-heading text-2xl text-ink">Bookings (Last 6 Months)</h2>
+            <p className="mb-4 text-sm text-slate-400">Number of bookings per month</p>
+            {stats.booking_trend?.length ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={stats.booking_trend} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <Tooltip formatter={(v) => [v, 'Bookings']} />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    name="Bookings"
+                    stroke="#6366f1"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: '#6366f1' }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[220px] items-center justify-center text-sm text-slate-400">No data yet</div>
+            )}
+          </div>
+
+          {/* Bar chart — spending per month */}
+          <div className="rounded-[1.5rem] border border-slate-200 p-6">
+            <h2 className="mb-1 font-heading text-2xl text-ink">Spending (Last 6 Months)</h2>
+            <p className="mb-4 text-sm text-slate-400">Total expenditure per month (₹)</p>
+            {stats.spending_trend?.length ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={stats.spending_trend} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v) => [formatCurrency(v), 'Spent']} />
+                  <Bar dataKey="revenue" name="Spent" radius={[6, 6, 0, 0]}>
+                    {stats.spending_trend.map((_, i) => (
+                      <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[220px] items-center justify-center text-sm text-slate-400">No data yet</div>
+            )}
+          </div>
+        </div>
+
+        {/* Recent bookings + quick actions */}
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
           <div className="rounded-[1.5rem] border border-slate-200 p-6">
             <h2 className="mb-4 font-heading text-3xl text-ink">Recent Bookings</h2>
@@ -100,13 +160,15 @@ export default function CustomerDashboard() {
             )}
           </div>
 
-          <QuickActions
-            actions={[
-              { label: 'Browse available vehicles', to: '/customer/vehicles' },
-              { label: 'View my bookings',          to: '/customer/bookings' },
-              { label: 'Update profile',            to: '/customer/profile' },
-            ]}
-          />
+          <div className="h-full">
+            <QuickActions
+              actions={[
+                { label: 'Browse available vehicles', to: '/customer/vehicles' },
+                { label: 'View my bookings',          to: '/customer/bookings' },
+                { label: 'Update profile',            to: '/customer/profile' },
+              ]}
+            />
+          </div>
         </div>
       </div>
       <ChatBot />

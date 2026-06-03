@@ -61,11 +61,11 @@ async def create_booking(
 
     pickup_date, return_date = validate_booking_dates(pickup_date, return_date)
 
-    # Block customer if they already have an approved/active booking overlapping these dates
+    # Block customer if they already have a booking overlapping these dates
     existing_active = await db.execute(
         select(Booking.id).where(
             Booking.customer_id == customer_id,
-            Booking.status.in_(ACTIVE_BOOKING_STATUSES),
+            Booking.status.in_([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.ACTIVE]),
             Booking.pickup_date < return_date,
             Booking.return_date > pickup_date,
         )

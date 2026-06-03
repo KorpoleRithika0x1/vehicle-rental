@@ -51,6 +51,14 @@ async def authenticate_user(db: AsyncSession, payload: LoginRequest) -> TokenRes
         logger.warning(f"auth_login_failed email={payload.email.lower()}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
 
+    # Check if account is blocked by admin
+    if not user.is_active:
+        logger.warning(f"auth_login_blocked user_id={user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been blocked. Please contact support."
+        )
+
     # Check account status
     if user.account_status == AccountStatus.PENDING_VERIFICATION:
         logger.warning(f"auth_login_pending_verification user_id={user.id}")

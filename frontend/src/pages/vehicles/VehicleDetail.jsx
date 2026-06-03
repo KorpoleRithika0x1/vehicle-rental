@@ -31,7 +31,7 @@ export default function VehicleDetail() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [availability, setAvailability] = useState(null);
-  const [hasActiveBooking, setHasActiveBooking] = useState(false);
+  const [myBookings, setMyBookings] = useState([]);
   const [pickupDate, setPickupDate] = useState(null);
   const [returnDate, setReturnDate] = useState(null);
   const [error, setError] = useState('');
@@ -53,8 +53,8 @@ export default function VehicleDetail() {
 
     if (isCustomer) {
       tasks.push(
-        fetchBookings({ status: 'approved', page_size: 50 })
-          .then((data) => { if (!ignore) setHasActiveBooking((data.items || []).length > 0); })
+        fetchBookings({ status: 'pending,approved,active', page_size: 50 })
+          .then((data) => { if (!ignore) setMyBookings(data.items || []); })
           .catch(() => {})
       );
     }
@@ -95,7 +95,13 @@ export default function VehicleDetail() {
     blockedRanges.some((r) => pickupDate < r.end && returnDate > r.start)
   );
 
-  const canBook = isCustomer && !isOutOfStock && !hasActiveBooking;
+  // Check if customer's own bookings overlap with selected dates
+  const hasMyBookingOverlap = Boolean(
+    pickupDate && returnDate &&
+    myBookings.some((b) => pickupDate < new Date(b.return_date) && returnDate > new Date(b.pickup_date))
+  );
+
+  const canBook = isCustomer && !isOutOfStock;
 
   const addonDailyTotal = ADDONS.reduce((sum, a) => sum + (addons[a.key] ? a.price : 0), 0);
   const totalDailyRate = Number(v.rental_price_per_day || 0) + addonDailyTotal;
@@ -109,16 +115,17 @@ export default function VehicleDetail() {
     ? { label: 'Unavailable', className: 'bg-rose-100 text-rose-700' }
     : { label: 'Available', className: 'bg-emerald-100 text-emerald-700' };
 
-  // Clear overlap error when dates change
   const dateError = hasOverlap
     ? 'This vehicle is not available for the selected dates.'
+    : hasMyBookingOverlap
+    ? 'You already have a booking that overlaps with these dates.'
     : '';
 
   function handleBook(e) {
     e.preventDefault();
     if (!pickupDate || !returnDate) { setError('Please select both dates.'); return; }
     if (returnDate <= pickupDate) { setError('Return date must be after pickup date.'); return; }
-    if (hasOverlap) { setError('Vehicle is not available for selected dates.'); return; }
+    if (hasOverlap || hasMyBookingOverlap) { setError(dateError); return; }
     setError('');
     setShowPayment(true);
   }
@@ -150,14 +157,6 @@ export default function VehicleDetail() {
         <ArrowLeft className="h-4 w-4" />
         {backLabel}
       </Link>
-
-      {hasActiveBooking && (
-        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span className="font-semibold">You already have an active booking. </span>
-          Complete or cancel it before booking another vehicle.{' '}
-          <Link to="/customer/bookings" className="font-semibold underline">View My Bookings</Link>
-        </div>
-      )}
 
       <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
         {/* Left — image + details */}
@@ -267,7 +266,7 @@ export default function VehicleDetail() {
 
                 <button
                   type="submit"
-                  disabled={!pickupDate || !returnDate || hasOverlap}
+                  disabled={!pickupDate || !returnDate || hasOverlap || hasMyBookingOverlap}
                   className="w-full rounded-xl bg-brand py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
                   Proceed to Payment
@@ -287,10 +286,6 @@ export default function VehicleDetail() {
                       Sign in to Book
                     </Link>
                   </>
-                ) : hasActiveBooking ? (
-                  <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    Complete or cancel your current booking before booking again.
-                  </p>
                 ) : (
                   <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
                     {isOutOfStock ? 'This vehicle is currently unavailable.' : 'Only customers can book vehicles.'}

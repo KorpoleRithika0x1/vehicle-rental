@@ -235,10 +235,10 @@ export default function Register() {
 
   return (
     <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_0.95fr] lg:px-8">
-      <div className="rounded-[2.5rem] bg-sand p-10 shadow-soft">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Create your account</p>
-        <h1 className="mt-6 font-heading text-5xl text-ink">Start booking with the same platform fleet teams rely on.</h1>
-        <p className="mt-5 text-slate-600">
+      <div className="rounded-[2.5rem] bg-brand p-10 text-white shadow-soft">
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gold">Create your account</p>
+        <h1 className="mt-6 font-heading text-5xl">Start booking with the same platform fleet teams rely on.</h1>
+        <p className="mt-5 text-slate-200">
           Registration creates a customer account. Your driving license and a live photo are required for verification before you can log in.
         </p>
       </div>

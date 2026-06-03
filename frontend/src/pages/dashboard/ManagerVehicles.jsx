@@ -282,8 +282,10 @@ export default function ManagerVehicles() {
       links={[
         { label: 'Dashboard', to: '/dashboard/manager', end: true },
         { label: 'Add Car', to: '/dashboard/manager/vehicles/add', end: true },
-        { label: 'Manage Vehicles', to: '/dashboard/manager/vehicles', end: true },
+        { label: 'Manage Cars', to: '/dashboard/manager/vehicles', end: true },
         { label: 'Manage Bookings', to: '/dashboard/manager/bookings' },
+        { label: 'Reviews', to: '/dashboard/manager/reviews' },
+        { label: 'Update Profile', to: '/dashboard/manager/profile' },
       ]}
     >
       {/* Edit modal — only shown when editing */}

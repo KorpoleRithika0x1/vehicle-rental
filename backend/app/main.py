@@ -17,6 +17,8 @@ from app.middleware.error_handler import register_exception_handlers
 from app.middleware.logging_middleware import log_requests
 from app.redis_client import close_redis, init_redis
 from app.routers import admin_regions, auth, bookings, chat, notifications, payments, stats, users, vehicles, verification
+from app.routers import reviews as reviews_router
+from app.routers import reports as reports_router
 
 
 settings = get_settings()
@@ -61,6 +63,8 @@ app.include_router(verification.router, prefix=settings.api_prefix)
 app.include_router(admin_regions.router, prefix=settings.api_prefix)
 app.include_router(admin_regions.manager_router, prefix=settings.api_prefix)
 app.include_router(chat.router, prefix=settings.api_prefix)
+app.include_router(reviews_router.router, prefix=settings.api_prefix)
+app.include_router(reports_router.router, prefix=settings.api_prefix)
 
 
 @app.get("/")

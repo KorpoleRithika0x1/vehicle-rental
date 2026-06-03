@@ -159,7 +159,10 @@ export default function CustomerProfilePage() {
       subtitle="Manage your personal details, contact information and security settings."
       links={CUSTOMER_LINKS}
     >
-      <div className="max-w-2xl space-y-8">
+      <div className="max-w-4xl space-y-8">
+
+        {/* Row 1: Personal Details + Password side by side */}
+        <div className="grid gap-8 lg:grid-cols-2">
 
         {/* Personal details */}
         <div className="glass-panel p-8">
@@ -255,7 +258,9 @@ export default function CustomerProfilePage() {
           </form>
         </div>
 
-        {/* Driving License */}
+        </div>{/* end row-1 grid */}
+
+        {/* Driving License — full width */}
         <div className="glass-panel p-8">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>

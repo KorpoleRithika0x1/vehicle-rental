@@ -48,6 +48,8 @@ export default function AdminLicenses() {
         { label: 'Manage Users', to: '/dashboard/admin/users' },
         { label: 'Manage Managers', to: '/dashboard/admin/managers' },
         { label: 'License Verifications', to: '/dashboard/admin/licenses' },
+        { label: 'Reports', to: '/dashboard/admin/reports' },
+        { label: 'Reviews', to: '/dashboard/admin/reviews' },
       ]}
     >
       <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-soft">

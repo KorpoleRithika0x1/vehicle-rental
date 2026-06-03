@@ -106,6 +106,24 @@ async def upload_license_document(
     current_user.license_verified = False
     await db.commit()
     await db.refresh(current_user)
+
+    from app.models import UserRole as _UserRole
+    from app.services.notification_service import create_notification
+    from sqlalchemy import select as _select
+    admins_result = await db.execute(_select(User).where(User.role == _UserRole.ADMIN))
+    for admin in admins_result.scalars().all():
+        try:
+            await create_notification(
+                db=db,
+                user_id=admin.id,
+                title="License Document Submitted",
+                message=f"{current_user.name} ({current_user.email}) has submitted a license document for verification.",
+                notification_type="license_submitted",
+                reference_id=str(current_user.id),
+            )
+        except Exception:
+            pass
+
     return ImageUploadResponse(image_url=url)
 
 

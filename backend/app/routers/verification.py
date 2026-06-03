@@ -144,6 +144,19 @@ async def reject_account(
     user.verification_reviewed_at = datetime.utcnow()
     
     await db.commit()
+
+    from app.services.notification_service import create_notification
+    try:
+        await create_notification(
+            db=db,
+            user_id=user.id,
+            title="Account Verification Rejected",
+            message=f"Your account verification was rejected. Reason: {payload.reason or 'Not specified'}. Please contact support for assistance.",
+            notification_type="account_rejected",
+            reference_id=str(user.id),
+        )
+    except Exception:
+        pass
     
     return {"message": "Account rejected."}
 
