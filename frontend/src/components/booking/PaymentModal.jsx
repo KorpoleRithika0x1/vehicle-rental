@@ -7,7 +7,8 @@ import { confirmPayment, createPaymentIntent } from '../../api/payments';
 import { useUiStore } from '../../store/uiStore';
 
 // Load Stripe once outside component to avoid re-instantiation
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 const CARD_ELEMENT_OPTIONS = {
   style: {
@@ -169,6 +170,10 @@ export default function PaymentModal({ vehicle, pickupDate, returnDate, pickupAd
 
   const load = useCallback(async () => {
     setLoadError('');
+    if (!stripePromise) {
+      setLoadError('Stripe publishable key is missing. Add VITE_STRIPE_PUBLISHABLE_KEY to frontend/.env and restart the frontend dev server.');
+      return;
+    }
     try {
       const data = await createPaymentIntent({
         vehicle_id: vehicle.id,
@@ -217,13 +222,15 @@ export default function PaymentModal({ vehicle, pickupDate, returnDate, pickupAd
         {loadError && (
           <div className="space-y-4">
             <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{loadError}</div>
-            <button
-              type="button"
-              onClick={load}
-              className="w-full rounded-full border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              Retry
-            </button>
+            {stripePromise ? (
+              <button
+                type="button"
+                onClick={load}
+                className="w-full rounded-full border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Retry
+              </button>
+            ) : null}
           </div>
         )}
 

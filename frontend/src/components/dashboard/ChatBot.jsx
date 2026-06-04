@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { sendChatMessage } from '../../api/chat';
 import { useAuth } from '../../hooks/useAuth';
+import PaymentModal from '../booking/PaymentModal';
 
 const STORAGE_KEY_PREFIX = 'veloce_chat_history';
 const MAX_HISTORY_TO_SEND = 12;
@@ -45,7 +46,8 @@ export default function ChatBot() {
   const [error, setError] = useState('');
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
-
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState(null);
   useEffect(() => {
     setMessages(loadHistory(storageKey, role));
   }, [role, storageKey]);
@@ -90,6 +92,11 @@ export default function ChatBot() {
       });
 
       setMessages((prev) => [...prev, { role: 'assistant', content: response.reply }]);
+
+      if (response.action?.type === 'PAYMENT_REQUIRED') {
+  setPendingBooking(response.action.payload);
+  setPaymentModalOpen(true);
+}
     } catch (err) {
       const message =
         err.code === 'ECONNABORTED'
@@ -225,6 +232,35 @@ export default function ChatBot() {
           </footer>
         </div>
       ) : null}
+
+      {paymentModalOpen && pendingBooking && (
+  <PaymentModal
+    vehicle={{
+      id: pendingBooking.vehicle_id,
+      vehicle_name: pendingBooking.vehicle_name,
+    }}
+    pickupDate={pendingBooking.pickup_date}
+    returnDate={pendingBooking.return_date}
+    onClose={() => {
+      setPaymentModalOpen(false);
+      setPendingBooking(null);
+    }}
+    onSuccess={(booking) => {
+      setPaymentModalOpen(false);
+      setPendingBooking(null);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: booking?.booking_id
+            ? `✅ Payment successful. Booking #${booking.booking_id} has been confirmed.`
+            : '✅ Payment successful. Your booking has been confirmed.',
+        },
+      ]);
+    }}
+  />
+)}
     </>
   );
 }

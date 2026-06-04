@@ -105,7 +105,7 @@ def _build_system_prompt(
 3. Do not create, cancel, approve, reject, update, delete, or complete records from chat for this user."""
     )
     intent_instruction = (
-        "Use intent BOOK_VEHICLE only when ready to book. Use CANCEL_BOOKING only when user clearly wants to cancel a specific booking ID."
+    "Use intent BOOK_VEHICLE only when vehicle, pickup date, and return date are known. The chatbot must collect booking details only. Payment and booking confirmation happen later through the payment flow. Use CANCEL_BOOKING only when user clearly wants to cancel a specific booking ID."
         if user and user.role == UserRole.CUSTOMER
         else "Always use intent GENERAL_QUERY for this user."
     )
@@ -255,27 +255,37 @@ async def _execute_action(
         )
 
     if intent == "BOOK_VEHICLE":
-        vehicle_id = _resolve_vehicle_id(
-            vehicles,
-            vehicle_id=action.get("vehicle_id"),
-            vehicle_name=action.get("vehicle_name"),
-            user_message=user_message,
-        ) if vehicles is not None else action.get("vehicle_id")
+        vehicle_id = (
+            _resolve_vehicle_id(
+                vehicles,
+                vehicle_id=action.get("vehicle_id"),
+                vehicle_name=action.get("vehicle_name"),
+                user_message=user_message,
+            )
+            if vehicles is not None
+            else action.get("vehicle_id")
+        )
+
         pickup_raw = action.get("pickup_date")
         return_raw = action.get("return_date")
+
         if not vehicle_id:
             return ChatAction(
                 type="BOOK_VEHICLE",
                 success=False,
-                message="Please specify which vehicle to book (name or ID from the catalog).",
+                message="Please specify which vehicle you would like to book.",
                 payload={"intent": intent},
             )
+
         if not pickup_raw or not return_raw:
             return ChatAction(
                 type="BOOK_VEHICLE",
                 success=False,
-                message="Please provide pickup and return dates to complete the booking.",
-                payload={"intent": intent, "vehicle_id": vehicle_id},
+                message="Please provide pickup and return dates to continue.",
+                payload={
+                    "intent": intent,
+                    "vehicle_id": vehicle_id,
+                },
             )
 
         try:
@@ -283,29 +293,44 @@ async def _execute_action(
                 datetime.fromisoformat(str(pickup_raw).replace("Z", "+00:00")),
                 datetime.fromisoformat(str(return_raw).replace("Z", "+00:00")),
             )
-            booking = await create_booking(db, redis, user.id, int(vehicle_id), pickup_date, return_date)
+
+            vehicle_name = None
+
+            if vehicles:
+                for v in vehicles.items:
+                    if v.id == int(vehicle_id):
+                        vehicle_name = f"{v.vehicle_name} {v.brand}"
+                        break
+
             return ChatAction(
-                type="BOOK_VEHICLE",
-                success=True,
-                message=f"Booking #{booking.id} confirmed for vehicle {booking.vehicle_id}.",
+                type="PAYMENT_REQUIRED",
+                success=False,
+                message="Payment is required before booking can be confirmed.",
                 payload={
-                    "booking_id": booking.id,
-                    "vehicle_id": booking.vehicle_id,
-                    "pickup_date": booking.pickup_date.isoformat(),
-                    "return_date": booking.return_date.isoformat(),
-                    "total_amount": str(booking.total_amount),
-                    "status": booking.status.value,
+                    "vehicle_id": int(vehicle_id),
+                    "vehicle_name": vehicle_name,
+                    "pickup_date": pickup_date.isoformat(),
+                    "return_date": return_date.isoformat(),
                 },
             )
+
         except HTTPException as exc:
             detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
-            return ChatAction(type="BOOK_VEHICLE", success=False, message=detail, payload={"intent": intent})
-        except Exception as exc:
-            logger.warning(f"chat_book_failed error={exc}")
+
             return ChatAction(
                 type="BOOK_VEHICLE",
                 success=False,
-                message="Could not create booking. Please verify vehicle ID and dates.",
+                message=detail,
+                payload={"intent": intent},
+            )
+
+        except Exception as exc:
+            logger.warning(f"chat_book_failed error={exc}")
+
+            return ChatAction(
+                type="BOOK_VEHICLE",
+                success=False,
+                message="Could not validate booking details.",
                 payload={"intent": intent},
             )
 

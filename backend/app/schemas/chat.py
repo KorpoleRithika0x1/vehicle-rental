@@ -31,7 +31,7 @@ class ChatRequest(BaseModel):
 
 
 class ChatAction(BaseModel):
-    type: Literal["BOOK_VEHICLE", "CANCEL_BOOKING", "NONE"]
+    type: Literal["BOOK_VEHICLE", "CANCEL_BOOKING", "PAYMENT_REQUIRED", "NONE"]
     success: bool
     message: str
     payload: dict | None = None
