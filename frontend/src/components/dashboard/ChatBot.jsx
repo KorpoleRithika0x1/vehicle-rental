@@ -2,34 +2,44 @@ import { Bot, MessageCircle, Send, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { sendChatMessage } from '../../api/chat';
+import { useAuth } from '../../hooks/useAuth';
 
-const STORAGE_KEY = 'veloce_chat_history';
+const STORAGE_KEY_PREFIX = 'veloce_chat_history';
 const MAX_HISTORY_TO_SEND = 12;
 
-const STARTER_MESSAGE = {
-  role: 'assistant',
-  content:
-    "Hi! I'm Veloce Assistant. I can help you find vehicles, answer rental questions, book a vehicle, or cancel an approved booking. What would you like to do?",
-};
+function starterMessage(role) {
+  const content =
+    role === 'customer'
+      ? "Hi! I'm Veloce Assistant. I can help you find vehicles, answer rental questions, book a vehicle, or cancel an approved booking. What would you like to do?"
+      : "Hi! I'm Veloce Assistant. I can answer questions about Veloce Rentals and this part of the app. What would you like to know?";
+  return { role: 'assistant', content };
+}
 
-function loadHistory() {
+function loadHistory(storageKey, role) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [STARTER_MESSAGE];
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return [starterMessage(role)];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length ? parsed : [STARTER_MESSAGE];
+    return Array.isArray(parsed) && parsed.length ? parsed : [starterMessage(role)];
   } catch {
-    return [STARTER_MESSAGE];
+    return [starterMessage(role)];
   }
 }
 
-function saveHistory(messages) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40)));
+function saveHistory(storageKey, messages) {
+  localStorage.setItem(storageKey, JSON.stringify(messages.slice(-40)));
 }
 
 export default function ChatBot() {
+  const { user } = useAuth();
+  const role = user?.role || 'public';
+  const storageKey = `${STORAGE_KEY_PREFIX}_${role}`;
+  const subtitle =
+    role === 'customer' ? 'Book, cancel, and ask about rentals' : 'Ask app questions for this area';
+  const placeholder =
+    role === 'customer' ? 'Ask about vehicles, book, or cancel...' : 'Ask about Veloce Rentals...';
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState(loadHistory);
+  const [messages, setMessages] = useState(() => loadHistory(storageKey, role));
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState('');
@@ -37,8 +47,12 @@ export default function ChatBot() {
   const inputRef = useRef(null);
 
   useEffect(() => {
-    saveHistory(messages);
-  }, [messages]);
+    setMessages(loadHistory(storageKey, role));
+  }, [role, storageKey]);
+
+  useEffect(() => {
+    saveHistory(storageKey, messages);
+  }, [messages, storageKey]);
 
   useEffect(() => {
     if (isOpen && scrollRef.current) {
@@ -102,9 +116,9 @@ export default function ChatBot() {
   }
 
   function handleClear() {
-    setMessages([STARTER_MESSAGE]);
+    setMessages([starterMessage(role)]);
     setError('');
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
   }
 
   return (
@@ -129,7 +143,7 @@ export default function ChatBot() {
               </div>
               <div>
                 <p className="font-semibold text-ink">Veloce Assistant</p>
-                <p className="text-xs text-slate-500">Book, cancel, and ask about rentals</p>
+                <p className="text-xs text-slate-500">{subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -194,7 +208,7 @@ export default function ChatBot() {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about vehicles, book, or cancel..."
+                placeholder={placeholder}
                 className="max-h-28 flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm text-ink outline-none ring-brand focus:ring-2"
                 disabled={isTyping}
               />

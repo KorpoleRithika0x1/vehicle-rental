@@ -2,6 +2,7 @@ import { ArrowRight, CheckCircle2, Mail, MapPin, Phone, ShieldCheck } from 'luci
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import ChatBot from '../components/dashboard/ChatBot';
 import {
   BRAND_LOGOS,
   CONTACT_INFO,
@@ -55,6 +56,7 @@ export default function Home() {
 
   return (
     <div>
+      <ChatBot />
       <section
         className="relative overflow-hidden z-0"
         style={{

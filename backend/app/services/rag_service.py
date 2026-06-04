@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 RAG_DOCS_DIR = BASE_DIR / "rag_docs"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 80
-COLLECTION_NAME = "vehicle_rental_docs_openrouter"
+COLLECTION_NAME = "vehicle_rental_docs_openrouter_v3"
 
 _collection = None
 _init_attempted = False
@@ -71,8 +71,20 @@ def _chunk_text(text: str, source: str) -> list[tuple[str, str]]:
     return chunks
 
 
-def _load_document_chunks() -> list[tuple[str, str, str]]:
-    chunks: list[tuple[str, str, str]] = []
+def _scope_for_source(source: str) -> str:
+    if source.startswith("admin_"):
+        return "admin"
+    if source.startswith("manager_"):
+        return "vehicle_manager"
+    if source.startswith("customer_"):
+        return "customer"
+    if source.startswith("shared_"):
+        return "shared"
+    return "public"
+
+
+def _load_document_chunks() -> list[tuple[str, str, str, str]]:
+    chunks: list[tuple[str, str, str, str]] = []
     if not RAG_DOCS_DIR.exists():
         return chunks
 
@@ -80,7 +92,7 @@ def _load_document_chunks() -> list[tuple[str, str, str]]:
         text = path.read_text(encoding="utf-8")
         for index, (chunk, source) in enumerate(_chunk_text(text, path.name)):
             chunk_id = hashlib.sha256(f"{source}:{index}:{chunk}".encode()).hexdigest()[:24]
-            chunks.append((chunk_id, chunk, source))
+            chunks.append((chunk_id, chunk, source, _scope_for_source(path.name)))
     return chunks
 
 
@@ -116,12 +128,12 @@ def _get_collection():
             new_ids: list[str] = []
             new_docs: list[str] = []
             new_meta: list[dict] = []
-            for chunk_id, chunk, source in doc_chunks:
+            for chunk_id, chunk, source, scope in doc_chunks:
                 if chunk_id in existing_ids:
                     continue
                 new_ids.append(chunk_id)
                 new_docs.append(chunk)
-                new_meta.append({"source": source})
+                new_meta.append({"source": source, "scope": scope})
 
             if new_ids:
                 collection.add(ids=new_ids, documents=new_docs, metadatas=new_meta)
@@ -134,13 +146,20 @@ def _get_collection():
         return None
 
 
-def retrieve_context(query: str, top_k: int = 4) -> str:
+def retrieve_context(query: str, top_k: int = 6, role: str | None = None) -> str:
     collection = _get_collection()
     if collection is None:
         return ""
 
     try:
-        results = collection.query(query_texts=[query], n_results=top_k)
+        allowed_scopes = ["public"]
+        if role:
+            allowed_scopes.append(role)
+        results = collection.query(
+            query_texts=[query],
+            n_results=top_k,
+            where={"scope": {"$in": allowed_scopes}},
+        )
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
         if not documents:

@@ -1,46 +1,44 @@
-# Veloce Rentals — Vehicle Selection Guide
+# Veloce Rentals Vehicle Guide
 
-## Choosing the right vehicle
+Audience: public visitors and all signed-in roles.
+Scope: public.
 
-### Car
-Best for: daily commutes, business travel, couples, small families (up to 5 seats).
-Examples: Tesla Model 3, Honda Civic, Audi A4.
-Typical daily rate: ₹88 – ₹146.
+## Vehicle catalog fields
 
-### SUV
-Best for: family trips, road trips, rough terrain, 5–7 passengers.
-Examples: Toyota Fortuner, BMW X5, Hyundai Creta, Mahindra Thar.
-Typical daily rate: ₹96 – ₹176.
+Each vehicle can include an ID, manager ID, vehicle name, brand, vehicle type, registration number, rental price per day, fuel type, seating capacity, vehicle count, availability status, city, description, creation date, update date, manager name, and images.
 
-### Van
-Best for: large groups, airport transfers, team outings (6–12 seats).
-Examples: Mercedes Sprinter, Volkswagen California, Kia Carnival.
-Typical daily rate: ₹165 – ₹189.
+## Vehicle types
 
-### Truck
-Best for: moving goods, construction sites, utility work.
-Examples: Ford Ranger, Chevrolet Silverado.
-Typical daily rate: ₹142 – ₹158.
+Car listings are best for city travel, airport trips, business travel, couples, and small families.
 
-### Bike
-Best for: solo city travel, short distances, parking ease.
-Examples: Yamaha FZ, Ather 450X, Royal Enfield Meteor.
-Typical daily rate: ₹31 – ₹42.
+SUV listings are best for family trips, road trips, executive travel, rougher roads, and larger passenger groups.
 
-## Fuel type tips
-- **Electric** — quiet, eco-friendly, best for city use (Tesla Model 3, Ather 450X).
-- **Hybrid** — balanced efficiency for mixed driving (BMW X5, Kia Carnival).
-- **Diesel** — better for long highway drives and heavy vehicles.
-- **Petrol** — widely available, good for standard city and highway use.
+Van listings are best for airport transfers, large groups, team outings, and luggage-heavy trips.
 
-## How to book via assistant
-Tell the assistant:
-1. Vehicle type or name (e.g. "book an SUV" or "Tesla Model 3")
-2. Pickup date (e.g. "June 10, 2026")
-3. Return date (e.g. "June 15, 2026")
+Truck listings are best for utility work, moving goods, and heavy-load use cases.
 
-The assistant will match vehicles from the live catalog and create the booking using your account.
+Bike listings are best for solo city travel, short-distance movement, and easier parking.
 
-## How to cancel via assistant
-Say "cancel booking" and provide your booking ID (shown in My Bookings or Recent Bookings on the dashboard).
-Only approved bookings can be cancelled.
+## Fuel types
+
+The app can list petrol, diesel, electric, and hybrid vehicles. Electric vehicles are useful for quieter city travel. Hybrid vehicles balance fuel efficiency and range. Diesel vehicles are useful for highway driving and heavier vehicles. Petrol vehicles are common for standard city and highway use.
+
+## Choosing a vehicle
+
+Use vehicle type for the trip purpose, seating capacity for passenger count, city for pickup coverage, fuel type for preference, and rental price per day for budget. Use available-only filtering when the user wants vehicles that can currently be rented.
+
+## Availability wording
+
+Availability means the vehicle is marked available, has stock count above zero, and has no blocking overlap for the requested date range. If the user asks for a guaranteed booking, the assistant should explain that the final booking request performs the authoritative backend check.
+
+## Live catalog answers
+
+The assistant receives live available catalog context when chat runs. It should recommend only vehicles from that live context and should not invent vehicle names, IDs, prices, stock, cities, or fuel types.
+
+## Booking through chat
+
+Only customers can book through chat. The assistant needs a vehicle ID or a clear vehicle match, a pickup date, and a return date. If the request lacks any of these, the assistant should ask for the missing detail instead of creating a booking.
+
+## Cancelling through chat
+
+Only customers can cancel through chat, and only when the customer provides a booking ID. If the booking is not cancellable according to backend rules, the assistant should explain the backend reason.

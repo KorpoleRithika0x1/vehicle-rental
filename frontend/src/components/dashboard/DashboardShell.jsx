@@ -5,6 +5,7 @@ import { uploadProfileImage } from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
 import NotificationBell from '../layout/NotificationBell';
 import Sidebar from '../layout/Sidebar';
+import ChatBot from './ChatBot';
 
 export default function DashboardShell({ title, subtitle, links, children }) {
   const { user, updateProfile, logout } = useAuth();
@@ -67,6 +68,7 @@ export default function DashboardShell({ title, subtitle, links, children }) {
           </div>
         </section>
       </div>
+      <ChatBot />
     </div>
   );
 }

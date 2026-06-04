@@ -1,33 +1,48 @@
-# Veloce Rentals — Rental Policies
+# Veloce Rentals Policies and Rules
 
-## Booking confirmation
-When you book a vehicle, the system checks real-time availability and stock count. If the vehicle is available for your dates, the booking is confirmed with status **approved**.
+Audience: public visitors and all signed-in roles.
+Scope: public.
 
-## Cancellation policy
-- Customers may cancel their own **approved** bookings.
-- Bookings that are pending, active, completed, or already cancelled cannot be cancelled via the cancel API.
-- When cancelling an approved booking, vehicle stock is restored automatically.
-- Always confirm the booking ID before cancelling.
+## Authentication and account status
 
-## Date and availability
-- Pickup and return dates are validated server-side.
-- If another customer books the same vehicle for overlapping dates and stock runs out, new bookings for those dates will be rejected.
-- The platform uses distributed locking to prevent double-booking during concurrent requests.
+The app uses JWT access and refresh tokens. Protected pages and APIs require an authenticated user. The backend rejects users who are not active, are blocked, or do not meet the role requirement for a protected endpoint.
 
-## Account requirements
-- Only customers with an **active** account status can use booking features.
-- License verification may be required for certain vehicles or account types.
+Customer registration can include license and live-photo verification. Customers registered through the verification flow start as pending verification and must be approved before normal protected access succeeds.
 
-## Pricing
-- Total price = daily rental rate × number of calendar days between pickup and return.
-- Prices are shown in INR on the platform.
+## Public customer registration flow
 
-## Assistant capabilities
-The dashboard chat assistant can:
-- Answer questions about vehicles, policies, and your bookings
-- Recommend available vehicles based on type, city, or budget
-- Create bookings when you provide vehicle ID and dates
-- Cancel approved bookings when you provide a booking ID
+Customer registration is available from `/register`. The Login page links to it with the text "Create one here" under "No account yet?" The customer registration form requires full name, email, phone number, password, a driving license image upload, and a live photo captured from the camera.
 
-## Data privacy
-Your booking history and profile information are only used to personalize assistant responses and are not shared with other customers.
+After the form is submitted successfully, the app stores the pending state in the browser session and shows a verification-submitted message. The customer receives access only after the submitted documents are approved.
+
+## Roles
+
+The public app supports customer onboarding and customer booking discovery. Protected operational dashboards exist for authorized staff roles, but public chat should not describe staff dashboard internals. Staff-role details belong only to the signed-in dashboard knowledge base for that exact role.
+
+## Booking date rules
+
+Pickup and return dates are validated on the backend. A return date must be after the pickup date. The minimum charged rental duration is one day. Booking APIs reject invalid date ranges.
+
+## Booking overlap and stock rules
+
+Customers cannot create a booking that overlaps with one of their existing pending, approved, or active bookings. Vehicle availability also checks overlapping bookings for the requested vehicle. Vehicle stock count and availability status must allow the rental.
+
+## Booking status rules
+
+The app uses booking statuses including pending, approved, active, completed, and cancelled. Revenue calculations include approved, active, and completed bookings. Cancellation and completion rules are enforced by backend services.
+
+## Cancellation rules
+
+Customers can cancel bookings only when the booking belongs to them and is allowed by backend status rules. The chat assistant is allowed to cancel only customer approved bookings when the customer gives a booking ID. Managers and admins should use dashboard workflows and APIs, not chat actions, for operational changes.
+
+## Payment rules
+
+Stripe must be configured on the backend before payment intent creation works. Payment intent creation validates dates, checks customer booking overlap, checks vehicle existence, checks vehicle availability status, checks booking overlap for the vehicle, calculates the amount in INR paise, and stores booking metadata on the Stripe PaymentIntent. Payment confirmation requires a succeeded PaymentIntent before creating and marking a booking paid.
+
+## Reviews
+
+Customers can submit one review for a booking only after that booking is completed and belongs to them. Review ratings must be between 1 and 5. Admins and vehicle managers can view reviews, with managers restricted by their assigned cities or own vehicles.
+
+## Privacy and assistant boundaries
+
+The assistant should use retrieved knowledge and live data rather than inventing behavior. Public users receive public knowledge only. Customers receive customer knowledge and their own booking context. Managers receive manager knowledge and manager-scoped vehicle data. Admins receive admin knowledge. The assistant should say it does not know when the knowledge base or live data does not answer a question.

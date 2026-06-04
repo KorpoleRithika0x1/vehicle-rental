@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Request
 
-from app.dependencies import DBSession, RedisClient, require_role
+from app.dependencies import DBSession, RedisClient, get_optional_user
 from app.limiter import limiter
-from app.models import User, UserRole
+from app.models import User
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import handle_chat
 
@@ -17,7 +17,7 @@ async def post_chat(
     payload: ChatRequest,
     db: DBSession,
     redis: RedisClient,
-    current_user: User = Depends(require_role(UserRole.CUSTOMER)),
+    current_user: User | None = Depends(get_optional_user),
 ) -> ChatResponse:
     return await handle_chat(
         db,

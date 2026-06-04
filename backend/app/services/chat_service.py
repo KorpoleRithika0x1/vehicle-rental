@@ -16,7 +16,7 @@ from app.schemas.chat import ChatAction, ChatMessage, ChatResponse
 from app.services.booking_service import cancel_booking, create_booking, list_bookings
 from app.services.openrouter_client import openrouter_base_url, openrouter_headers
 from app.services.rag_service import retrieve_context
-from app.services.vehicle_service import list_vehicles
+from app.services.vehicle_service import get_manager_cities, list_vehicles
 from app.utils.date_utils import validate_booking_dates
 
 
@@ -87,19 +87,46 @@ def _format_vehicles_context(vehicles) -> str:
     return "\n".join(lines)
 
 
-def _build_system_prompt(*, user: User, rag_context: str, bookings_context: str, vehicles_context: str) -> str:
+def _build_system_prompt(
+    *,
+    user: User | None,
+    rag_context: str,
+    bookings_context: str,
+    vehicles_context: str,
+) -> str:
+    role = user.role.value if user else "public"
+    name = user.name if user else "Guest visitor"
+    email = user.email if user else "Not signed in"
+    action_instructions = (
+        """2. Help customers book vehicles when they provide enough details (vehicle ID or clear vehicle match, pickup date, return date).
+3. Help customers cancel approved bookings when they provide a booking ID."""
+        if user and user.role == UserRole.CUSTOMER
+        else """2. Answer knowledge-base questions only for this user.
+3. Do not create, cancel, approve, reject, update, delete, or complete records from chat for this user."""
+    )
+    intent_instruction = (
+        "Use intent BOOK_VEHICLE only when ready to book. Use CANCEL_BOOKING only when user clearly wants to cancel a specific booking ID."
+        if user and user.role == UserRole.CUSTOMER
+        else "Always use intent GENERAL_QUERY for this user."
+    )
+    access_boundary = (
+        "This is a public chat. Answer public app questions, customer account creation questions, vehicle browsing questions, and how a customer can book after approval. Do not answer manager/admin dashboard internals or claim you can perform signed-in actions."
+        if user is None
+        else f"This user is signed in as {role}. Do not answer questions about dashboards or permissions for other roles."
+    )
     return f"""You are Veloce Assistant, a helpful vehicle rental chatbot for Veloce Rentals.
 
 User profile:
-- Name: {user.name}
-- Email: {user.email}
-- Role: {user.role.value}
+- Name: {name}
+- Email: {email}
+- Role: {role}
 
 Your job:
 1. Answer questions about vehicles, bookings, policies, and the rental platform.
-2. Help users book vehicles when they provide enough details (vehicle ID or clear vehicle match, pickup date, return date).
-3. Help users cancel approved bookings when they provide a booking ID.
+{action_instructions}
 4. Use the live data below for accurate answers. Do not invent vehicles or bookings.
+5. If the answer is not in the retrieved knowledge base or live data, say you do not know.
+6. Access boundary: {access_boundary}
 
 {rag_context}
 
@@ -122,14 +149,26 @@ Response format (strict):
 3. Then output a single JSON object (no markdown fences) with this schema:
 {{"intent":"GENERAL_QUERY"|"BOOK_VEHICLE"|"CANCEL_BOOKING","vehicle_id":null|number,"vehicle_name":null|"string","pickup_date":null|"ISO-8601","return_date":null|"ISO-8601","booking_id":null|number}}
 
-Use intent BOOK_VEHICLE only when ready to book. Use CANCEL_BOOKING only when user clearly wants to cancel a specific booking ID.
+{intent_instruction}
 Use GENERAL_QUERY for questions, recommendations, or when more info is needed (leave action fields null).
 """
 
 
 def _parse_action(raw_reply: str) -> tuple[str, dict | None]:
     if ACTION_MARKER not in raw_reply:
-        return raw_reply.strip(), None
+        json_start = raw_reply.rfind("{")
+        if json_start == -1:
+            return raw_reply.strip(), None
+        reply = raw_reply[:json_start].strip()
+        action_text = raw_reply[json_start:].strip()
+        try:
+            action = json.loads(action_text)
+        except json.JSONDecodeError:
+            return raw_reply.strip(), None
+        if not isinstance(action, dict) or "intent" not in action:
+            return raw_reply.strip(), None
+        reply = re.sub(r"\n?\s*-{3,}\s*$", "", reply).strip()
+        return reply, action
 
     reply, action_text = raw_reply.split(ACTION_MARKER, 1)
     action_text = action_text.strip()
@@ -206,6 +245,14 @@ async def _execute_action(
     intent = action.get("intent", "GENERAL_QUERY")
     if intent == "GENERAL_QUERY":
         return None
+
+    if user.role != UserRole.CUSTOMER:
+        return ChatAction(
+            type="NONE",
+            success=False,
+            message="Chat actions are available for customers only.",
+            payload={"intent": intent},
+        )
 
     if intent == "BOOK_VEHICLE":
         vehicle_id = _resolve_vehicle_id(
@@ -298,17 +345,22 @@ async def _execute_action(
 async def handle_chat(
     db: AsyncSession,
     redis: Redis,
-    user: User,
+    user: User | None,
     message: str,
     conversation_history: list[ChatMessage],
 ) -> ChatResponse:
-    if user.role != UserRole.CUSTOMER:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chat is available for customers only.")
-
     conversation_history = _normalize_history(conversation_history)
 
-    rag_context = retrieve_context(message)
-    bookings = await list_bookings(db, user, page=1, page_size=15, status_filter=None)
+    role = user.role.value if user else None
+    rag_context = retrieve_context(message, role=role)
+    bookings_context = "No signed-in customer booking context is available."
+    if user and user.role == UserRole.CUSTOMER:
+        bookings = await list_bookings(db, user, page=1, page_size=15, status_filter=None)
+        bookings_context = _format_bookings_context(bookings)
+
+    manager_cities = None
+    if user and user.role == UserRole.VEHICLE_MANAGER:
+        manager_cities = await get_manager_cities(db, user.id)
     vehicles, _ = await list_vehicles(
         db,
         redis,
@@ -321,25 +373,28 @@ async def handle_chat(
         available_only=True,
         page=1,
         page_size=30,
+        manager_cities=manager_cities,
     )
 
     system_prompt = _build_system_prompt(
         user=user,
         rag_context=rag_context or "Knowledge base unavailable.",
-        bookings_context=_format_bookings_context(bookings),
+        bookings_context=bookings_context,
         vehicles_context=_format_vehicles_context(vehicles),
     )
 
     raw_reply = await _call_openrouter(system_prompt, conversation_history, message)
     reply, action_data = _parse_action(raw_reply)
-    action_result = await _execute_action(
-        db,
-        redis,
-        user,
-        action_data,
-        vehicles=vehicles,
-        user_message=message,
-    )
+    action_result = None
+    if user:
+        action_result = await _execute_action(
+            db,
+            redis,
+            user,
+            action_data,
+            vehicles=vehicles,
+            user_message=message,
+        )
 
     if action_result and not action_result.success and action_result.message:
         reply = f"{reply}\n\nNote: {action_result.message}"
