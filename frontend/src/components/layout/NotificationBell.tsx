@@ -75,11 +75,21 @@ export default function NotificationBell() {
           <div className="max-h-96 overflow-y-auto p-2">
             {notifications.length > 0 ? (
               notifications.map((n) => (
-                <div key={n.id} className="rounded-xl px-3 py-3 hover:bg-slate-50">
+                <div
+                  key={n.id}
+                  className={`rounded-xl px-3 py-3 hover:bg-slate-50 ${!n.is_read ? 'bg-brand/5' : ''}`}
+                >
+                  <div className="flex items-start gap-2">
+                    {!n.is_read ? (
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand" aria-hidden />
+                    ) : null}
+                    <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-ink">{n.title}</div>
                   <p className="mt-0.5 text-sm text-slate-500 line-clamp-2">{n.message}</p>
                   <div className="mt-1.5 text-xs text-slate-400">
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                  </div>
+                    </div>
                   </div>
                 </div>
               ))

@@ -44,7 +44,15 @@ async def post_booking(
         from fastapi import HTTPException, status
 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only customers can create bookings.")
-    booking = await create_booking(db, redis, current_user.id, payload.vehicle_id, payload.pickup_date, payload.return_date)
+    booking = await create_booking(
+        db,
+        redis,
+        current_user.id,
+        payload.vehicle_id,
+        payload.pickup_date,
+        payload.return_date,
+        payload.pickup_address,
+    )
     return BookingResponse.model_validate(booking)
 
 

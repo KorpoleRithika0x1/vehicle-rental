@@ -6,10 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import { useBooking } from '../../hooks/useBooking';
 import { formatCurrency } from '../../utils/formatCurrency';
 import DateRangePicker from './DateRangePicker';
+import PickupAddressSelect from './PickupAddressSelect';
 
 export default function BookingForm({ vehicle, availability, disabled = false }) {
   const [pickupDate, setPickupDate] = useState(null);
   const [returnDate, setReturnDate] = useState(null);
+  const [pickupAddress, setPickupAddress] = useState('');
   const [inlineError, setInlineError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createBooking } = useBooking();
@@ -53,6 +55,10 @@ export default function BookingForm({ vehicle, availability, disabled = false })
       setInlineError('Please select both pickup and return dates.');
       return;
     }
+    if (!pickupAddress) {
+      setInlineError('Please select a pickup location.');
+      return;
+    }
     if (hasOverlap) {
       setInlineError('This vehicle is not available for your selected dates. Please choose different dates.');
       return;
@@ -65,6 +71,7 @@ export default function BookingForm({ vehicle, availability, disabled = false })
         vehicle_id: vehicle.id,
         pickup_date: pickupDate.toISOString(),
         return_date: returnDate.toISOString(),
+        pickup_address: pickupAddress,
       });
       navigate('/booking/history');
     } catch (error) {
@@ -91,6 +98,13 @@ export default function BookingForm({ vehicle, availability, disabled = false })
         onStartChange={setPickupDate}
         onEndChange={setReturnDate}
         excludeDateIntervals={blockedRanges}
+      />
+
+      <PickupAddressSelect
+        city={vehicle.city}
+        value={pickupAddress}
+        onChange={setPickupAddress}
+        disabled={disabled || isSubmitting}
       />
 
       <div className="rounded-2xl bg-slate-50 p-4">

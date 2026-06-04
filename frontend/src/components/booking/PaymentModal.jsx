@@ -66,6 +66,7 @@ function CheckoutForm({ intent, bookingMeta, onSuccess, onClose }) {
         vehicle_id: bookingMeta.vehicle_id,
         pickup_date: bookingMeta.pickup_date,
         return_date: bookingMeta.return_date,
+        pickup_address: bookingMeta.pickup_address,
       });
 
       setConfirmed(result);
@@ -162,7 +163,7 @@ function CheckoutForm({ intent, bookingMeta, onSuccess, onClose }) {
 }
 
 // ── Outer modal — handles intent creation + Stripe provider ───────────────
-export default function PaymentModal({ vehicle, pickupDate, returnDate, onClose, onSuccess }) {
+export default function PaymentModal({ vehicle, pickupDate, returnDate, pickupAddress, onClose, onSuccess }) {
   const [intent, setIntent] = useState(null);
   const [loadError, setLoadError] = useState('');
 
@@ -173,12 +174,13 @@ export default function PaymentModal({ vehicle, pickupDate, returnDate, onClose,
         vehicle_id: vehicle.id,
         pickup_date: new Date(pickupDate).toISOString(),
         return_date: new Date(returnDate).toISOString(),
+        pickup_address: pickupAddress || undefined,
       });
       setIntent(data);
     } catch (err) {
       setLoadError(err?.normalizedMessage || 'Failed to initialise payment. Please try again.');
     }
-  }, [vehicle.id, pickupDate, returnDate]);
+  }, [vehicle.id, pickupDate, returnDate, pickupAddress]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -235,6 +237,7 @@ export default function PaymentModal({ vehicle, pickupDate, returnDate, onClose,
                 vehicle_name: vehicle.vehicle_name,
                 pickup_date: new Date(pickupDate).toISOString(),
                 return_date: new Date(returnDate).toISOString(),
+                pickup_address: pickupAddress,
               }}
               onSuccess={onSuccess}
               onClose={onClose}

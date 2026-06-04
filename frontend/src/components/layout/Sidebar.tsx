@@ -78,7 +78,7 @@ export default function Sidebar({
   const navLinks = links?.length ? links : ROLE_DEFAULT_LINKS[role] || [];
 
   return (
-    <aside className="flex w-[260px] shrink-0 flex-col border-r-2 border-slate-200 bg-white">
+    <aside className="flex w-[260px] shrink-0 flex-col border border-slate-200/90 border-l-0 border-y-0 bg-white shadow-[2px_0_16px_-8px_rgba(22,33,62,0.18)] dark:border-slate-700 dark:bg-slate-900">
       {/* Profile section */}
       <div className="flex flex-col items-center border-b border-slate-100 px-6 pb-6 pt-8">
         <button

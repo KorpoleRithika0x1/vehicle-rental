@@ -16,7 +16,7 @@ from app.middleware.auth_middleware import attach_auth_context
 from app.middleware.error_handler import register_exception_handlers
 from app.middleware.logging_middleware import log_requests
 from app.redis_client import close_redis, init_redis
-from app.routers import admin_regions, auth, bookings, chat, notifications, payments, stats, users, vehicles, verification
+from app.routers import admin_regions, auth, bookings, chat, notifications, payments, regions, stats, users, vehicles, verification
 from app.routers import reviews as reviews_router
 from app.routers import reports as reports_router
 
@@ -54,8 +54,9 @@ app.middleware("http")(log_requests)
 register_exception_handlers(app)
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(vehicles.router, prefix=settings.api_prefix)
+app.include_router(regions.router, prefix=settings.api_prefix)
 app.include_router(bookings.router, prefix=settings.api_prefix)
-app.include_router(notifications.router, prefix=settings.api_prefix)
+app.include_router(notifications.router, prefix=f"{settings.api_prefix}/notifications")
 app.include_router(payments.router, prefix=settings.api_prefix)
 app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(stats.router, prefix=settings.api_prefix)

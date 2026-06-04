@@ -11,6 +11,7 @@ class BookingCreateRequest(BaseModel):
     vehicle_id: int
     pickup_date: datetime
     return_date: datetime
+    pickup_address: str | None = None
 
 
 class BookingVehicleSummary(BaseModel):
@@ -33,6 +34,7 @@ class BookingResponse(ORMBaseModel):
     vehicle_id: int
     pickup_date: datetime
     return_date: datetime
+    pickup_address: str | None = None
     total_amount: Decimal
     status: BookingStatus
     created_at: datetime

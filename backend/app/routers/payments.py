@@ -37,6 +37,7 @@ class CreateIntentRequest(BaseModel):
     vehicle_id: int
     pickup_date: datetime
     return_date: datetime
+    pickup_address: str | None = None
 
 
 class CreateIntentResponse(BaseModel):
@@ -51,6 +52,7 @@ class ConfirmPaymentRequest(BaseModel):
     vehicle_id: int
     pickup_date: datetime
     return_date: datetime
+    pickup_address: str | None = None
 
 
 class ConfirmPaymentResponse(BaseModel):
@@ -112,15 +114,19 @@ async def create_payment_intent(
     total_inr = Decimal(vehicle.rental_price_per_day) * days
     amount_paise = int(total_inr * 100)  # INR → paise
 
+    metadata = {
+        "customer_id": str(current_user.id),
+        "vehicle_id": str(payload.vehicle_id),
+        "pickup_date": pickup_date.isoformat(),
+        "return_date": return_date.isoformat(),
+    }
+    if payload.pickup_address:
+        metadata["pickup_address"] = payload.pickup_address.strip()
+
     intent = _stripe.PaymentIntent.create(
         amount=amount_paise,
         currency="inr",
-        metadata={
-            "customer_id": str(current_user.id),
-            "vehicle_id": str(payload.vehicle_id),
-            "pickup_date": pickup_date.isoformat(),
-            "return_date": return_date.isoformat(),
-        },
+        metadata=metadata,
     )
 
     return CreateIntentResponse(
@@ -156,6 +162,10 @@ async def confirm_payment(
         )
 
     # Create the booking
+    pickup_address = payload.pickup_address
+    if not pickup_address and intent.metadata:
+        pickup_address = intent.metadata.get("pickup_address")
+
     booking = await create_booking(
         db=db,
         redis=redis,
@@ -163,6 +173,7 @@ async def confirm_payment(
         vehicle_id=payload.vehicle_id,
         pickup_date=payload.pickup_date,
         return_date=payload.return_date,
+        pickup_address=pickup_address,
     )
 
     # Stamp payment info on the booking

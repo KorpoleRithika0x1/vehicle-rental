@@ -1,5 +1,6 @@
 from app.models.booking import Booking, BookingStatus, PaymentStatus
 from app.models.manager_region import ManagerRegion
+from app.models.region_pickup_address import RegionPickupAddress
 from app.models.notification import Notification
 from app.models.review import Review
 from app.models.user import User, UserRole, AccountStatus
@@ -11,6 +12,7 @@ __all__ = [
     "BookingStatus",
     "FuelType",
     "ManagerRegion",
+    "RegionPickupAddress",
     "PaymentStatus",
     "Notification",
     "Review",

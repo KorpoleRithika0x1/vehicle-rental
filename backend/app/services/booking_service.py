@@ -37,13 +37,93 @@ async def _invalidate_booking_cache(redis: Redis, booking: Booking) -> None:
         logger.warning(f"booking_cache_invalidate_failed booking_id={booking.id} error={exc}")
 
 
-def _queue_notification(background_tasks: BackgroundTasks | None, event: str, booking: Booking) -> None:
-    if background_tasks is None:
-        return
-    background_tasks.add_task(
-        logger.info,
-        f"booking_notification event={event} booking_id={booking.id} customer_id={booking.customer_id} vehicle_id={booking.vehicle_id}",
-    )
+def _vehicle_name(booking: Booking) -> str:
+    if booking.vehicle:
+        return booking.vehicle.vehicle_name
+    return "your vehicle"
+
+
+async def _notify_booking_event(
+    db: AsyncSession,
+    event: str,
+    booking: Booking,
+    actor: User | None = None,
+) -> None:
+    """Persist in-app notifications for booking lifecycle events."""
+    vehicle_name = _vehicle_name(booking)
+    pickup_str = booking.pickup_date.strftime("%d %b %Y")
+    return_str = booking.return_date.strftime("%d %b %Y")
+    ref = str(booking.id)
+    manager_id = booking.vehicle.manager_id if booking.vehicle else None
+
+    try:
+        if event == "approved":
+            await create_notification(
+                db=db,
+                user_id=booking.customer_id,
+                title="Booking Approved",
+                message=(
+                    f"Your booking for {vehicle_name} from {pickup_str} to {return_str} "
+                    "has been approved."
+                ),
+                notification_type="booking_approved",
+                reference_id=ref,
+            )
+        elif event == "rejected":
+            await create_notification(
+                db=db,
+                user_id=booking.customer_id,
+                title="Booking Declined",
+                message=(
+                    f"Your booking request for {vehicle_name} from {pickup_str} to {return_str} "
+                    "was declined."
+                ),
+                notification_type="booking_rejected",
+                reference_id=ref,
+            )
+        elif event == "cancelled":
+            if actor and actor.role == UserRole.CUSTOMER:
+                if manager_id:
+                    await create_notification(
+                        db=db,
+                        user_id=manager_id,
+                        title="Booking Cancelled by Customer",
+                        message=(
+                            f"{booking.customer.name} cancelled their booking for {vehicle_name} "
+                            f"({pickup_str} – {return_str})."
+                        ),
+                        notification_type="booking_cancelled",
+                        reference_id=ref,
+                    )
+            else:
+                await create_notification(
+                    db=db,
+                    user_id=booking.customer_id,
+                    title="Booking Cancelled",
+                    message=(
+                        f"Your booking for {vehicle_name} from {pickup_str} to {return_str} "
+                        "has been cancelled."
+                    ),
+                    notification_type="booking_cancelled",
+                    reference_id=ref,
+                )
+        elif event == "completed":
+            if manager_id:
+                await create_notification(
+                    db=db,
+                    user_id=manager_id,
+                    title="Booking Completed",
+                    message=(
+                        f"Booking #{booking.id} for {vehicle_name} "
+                        f"({pickup_str} – {return_str}) has been marked completed."
+                    ),
+                    notification_type="booking_completed",
+                    reference_id=ref,
+                )
+    except Exception as exc:
+        logger.warning(
+            f"booking_notification_failed event={event} booking_id={booking.id} error={exc}"
+        )
 
 
 async def create_booking(
@@ -53,6 +133,7 @@ async def create_booking(
     vehicle_id: int,
     pickup_date,
     return_date,
+    pickup_address: str | None = None,
 ) -> Booking:
     customer_result = await db.execute(select(User).where(User.id == customer_id))
     customer = customer_result.scalar_one_or_none()
@@ -141,6 +222,7 @@ async def create_booking(
             vehicle_id=vehicle_id,
             pickup_date=pickup_date,
             return_date=return_date,
+            pickup_address=pickup_address.strip() if pickup_address else None,
             total_amount=total,
             status=BookingStatus.APPROVED,
         )
@@ -379,7 +461,7 @@ async def approve_booking(
     await db.refresh(booking)
     await _invalidate_booking_cache(redis, booking)
     logger.info(f"booking_approved booking_id={booking.id} actor_id={actor.id}")
-    _queue_notification(background_tasks, "approved", booking)
+    await _notify_booking_event(db, "approved", booking, actor)
     return booking
 
 
@@ -399,7 +481,7 @@ async def reject_booking(
     await db.refresh(booking)
     await _invalidate_booking_cache(redis, booking)
     logger.info(f"booking_rejected booking_id={booking.id} actor_id={actor.id}")
-    _queue_notification(background_tasks, "rejected", booking)
+    await _notify_booking_event(db, "rejected", booking, actor)
     return booking
 
 
@@ -431,7 +513,7 @@ async def cancel_booking(
     await db.refresh(booking)
     await _invalidate_booking_cache(redis, booking)
     logger.info(f"booking_cancelled booking_id={booking.id} actor_id={actor.id}")
-    _queue_notification(background_tasks, "cancelled", booking)
+    await _notify_booking_event(db, "cancelled", booking, actor)
     return booking
 
 
@@ -460,11 +542,14 @@ async def complete_booking(
         db=db,
         user_id=booking.customer_id,
         title="Booking Completed",
-        message=f"Your booking for {booking.vehicle.vehicle_name} has been completed. Thank you for choosing us!",
+        message=(
+            f"Your booking for {_vehicle_name(booking)} has been completed. "
+            "Thank you for choosing us!"
+        ),
         notification_type="booking_completed",
         reference_id=str(booking.id),
     )
-    
+    await _notify_booking_event(db, "completed", booking, actor)
+
     logger.info(f"booking_completed booking_id={booking.id} actor_id={actor.id}")
-    _queue_notification(background_tasks, "completed", booking)
     return booking

@@ -20,8 +20,15 @@ export const ROLE_DASHBOARD_PATHS = {
 export const NAV_LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Vehicles', to: '/vehicles' },
-  { label: 'Bookings', to: '/booking/history' },
+  { label: 'Contact Us', to: '/#contact' },
 ];
+
+export const CONTACT_INFO = {
+  phone: '+1 (800) 555-0199',
+  email: 'care@velocerentals.com',
+  hours: 'Mon–Sun, 7:00 AM – 10:00 PM (local time)',
+  address: '1200 Fleet Avenue, Suite 400, San Francisco, CA 94107',
+};
 
 export const USP_ITEMS = [
   { title: 'Fast Service', description: 'Instant availability, transparent pricing, and polished delivery.', icon: Sparkles },
@@ -41,33 +48,35 @@ export const FEATURE_ITEMS = [
 
 export const BRAND_LOGOS = ['Thrifty', 'National', 'Alamo', 'Hertz', 'Europcar', 'United'];
 
+const DESTINATION_IMAGE_PARAMS = 'auto=format&fit=crop&w=1200&h=720&q=80';
+
 export const DESTINATIONS = [
   {
     id: 'metro',
     title: 'Metro Cities',
     subtitle: 'High-frequency business and leisure pickups',
-    image: 'https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?auto=format&fit=crop&w=1200&q=80',
+    image: `https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?${DESTINATION_IMAGE_PARAMS}`,
     locations: ['Mumbai', 'Delhi', 'Bangalore'],
   },
   {
     id: 'coastal',
     title: 'Coastal Drives',
     subtitle: 'Premium vehicles for sea-side road trips',
-    image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1200&q=80',
+    image: `https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?${DESTINATION_IMAGE_PARAMS}`,
     locations: ['Goa', 'Kochi', 'Chennai'],
   },
   {
     id: 'hills',
     title: 'Hill Escapes',
     subtitle: 'Adventure-ready vehicles for mountain routes',
-    image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1200&q=80',
+    image: `https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?${DESTINATION_IMAGE_PARAMS}`,
     locations: ['Manali', 'Guwahati', 'Kolkata'],
   },
   {
     id: 'south',
     title: 'South India',
     subtitle: 'Cultural hubs and temple town road trips',
-    image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1200&q=80',
+    image: `https://images.unsplash.com/photo-1582510003544-4d00b7f74220?${DESTINATION_IMAGE_PARAMS}`,
     locations: ['Hyderabad', 'Chennai', 'Kochi'],
   },
 ];

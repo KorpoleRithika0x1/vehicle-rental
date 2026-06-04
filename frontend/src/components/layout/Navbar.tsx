@@ -1,6 +1,6 @@
 import { Menu, UserCircle2 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
 import { NAV_LINKS, ROLE_DASHBOARD_PATHS } from '../../utils/constants';
@@ -10,6 +10,15 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  function scrollToContact() {
+    if (location.pathname !== '/') {
+      navigate('/#contact');
+      return;
+    }
+    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+  }
 
   function handleLogout() {
     logout();
@@ -34,17 +43,28 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           <nav className="hidden items-center gap-6 md:flex">
-            {NAV_LINKS.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `text-sm font-medium transition ${isActive ? 'text-brand' : 'text-slate-600 hover:text-brand'}`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {NAV_LINKS.map((item) =>
+              item.to === '/#contact' ? (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={scrollToContact}
+                  className="text-sm font-medium text-slate-600 transition hover:text-brand"
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `text-sm font-medium transition ${isActive ? 'text-brand' : 'text-slate-600 hover:text-brand'}`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              )
+            )}
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 {canAccessDashboard ? (
@@ -82,11 +102,25 @@ export default function Navbar() {
       {open && (
         <div className="border-t border-slate-200 bg-white px-4 py-4 md:hidden">
           <div className="flex flex-col gap-3">
-            {NAV_LINKS.map((item) => (
-              <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className="text-sm font-medium text-slate-600">
-                {item.label}
-              </NavLink>
-            ))}
+            {NAV_LINKS.map((item) =>
+              item.to === '/#contact' ? (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    scrollToContact();
+                  }}
+                  className="text-left text-sm font-medium text-slate-600"
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className="text-sm font-medium text-slate-600">
+                  {item.label}
+                </NavLink>
+              )
+            )}
             {isAuthenticated ? (
               <>
                 {canAccessDashboard ? (

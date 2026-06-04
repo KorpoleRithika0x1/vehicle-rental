@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchBookingAvailability, fetchBookings } from '../../api/bookings';
 import Loader from '../../components/common/Loader';
 import DateRangePicker from '../../components/booking/DateRangePicker';
+import PickupAddressSelect from '../../components/booking/PickupAddressSelect';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useVehicleStore } from '../../store/vehicleStore';
@@ -34,6 +35,7 @@ export default function VehicleDetail() {
   const [myBookings, setMyBookings] = useState([]);
   const [pickupDate, setPickupDate] = useState(null);
   const [returnDate, setReturnDate] = useState(null);
+  const [pickupAddress, setPickupAddress] = useState('');
   const [error, setError] = useState('');
   const [showPayment, setShowPayment] = useState(false);
   const [addons, setAddons] = useState({ theft: false, collision: false, insurance: false, driver: false });
@@ -124,6 +126,7 @@ export default function VehicleDetail() {
   function handleBook(e) {
     e.preventDefault();
     if (!pickupDate || !returnDate) { setError('Please select both dates.'); return; }
+    if (!pickupAddress) { setError('Please select a pickup location.'); return; }
     if (returnDate <= pickupDate) { setError('Return date must be after pickup date.'); return; }
     if (hasOverlap || hasMyBookingOverlap) { setError(dateError); return; }
     setError('');
@@ -143,6 +146,7 @@ export default function VehicleDetail() {
             vehicle={v}
             pickupDate={pickupDate}
             returnDate={returnDate}
+            pickupAddress={pickupAddress}
             onClose={() => setShowPayment(false)}
             onSuccess={() => {
               setShowPayment(false);
@@ -236,6 +240,12 @@ export default function VehicleDetail() {
                   onStartChange={(d) => { setPickupDate(d); setError(''); }}
                   onEndChange={(d) => { setReturnDate(d); setError(''); }}
                   excludeDateIntervals={blockedRanges}
+                />
+
+                <PickupAddressSelect
+                  city={v.city}
+                  value={pickupAddress}
+                  onChange={(addr) => { setPickupAddress(addr); setError(''); }}
                 />
 
                 <div>

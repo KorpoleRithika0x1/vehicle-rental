@@ -149,6 +149,7 @@ async def list_vehicles(
                     Vehicle.brand.ilike(search_term),
                     Vehicle.registration_number.ilike(search_term),
                     Vehicle.description.ilike(search_term),
+                    Vehicle.city.ilike(search_term),
                 )
             )
         if vehicle_type:
@@ -182,6 +183,7 @@ async def list_vehicles(
                 Vehicle.seating_capacity,
                 Vehicle.vehicle_count,
                 Vehicle.availability_status,
+                Vehicle.city,
                 Vehicle.created_at,
                 func.coalesce(active_booking_subquery.c.active_booking_count, 0).label("active_booking_count"),
                 primary_image_subquery.c.primary_image,
@@ -211,6 +213,7 @@ async def list_vehicles(
                 "seating_capacity": row.seating_capacity,
                 "vehicle_count": row.vehicle_count,
                 "availability_status": row.availability_status,
+                "city": row.city,
                 "has_active_booking": bool(row.active_booking_count),
                 "primary_image": row.primary_image,
                 "created_at": row.created_at,

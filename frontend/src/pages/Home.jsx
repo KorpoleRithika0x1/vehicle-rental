@@ -1,9 +1,10 @@
-import { ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ArrowRight, CheckCircle2, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import {
   BRAND_LOGOS,
+  CONTACT_INFO,
   DESTINATIONS,
   FAQ_ITEMS,
   FEATURE_ITEMS,
@@ -18,7 +19,25 @@ export default function Home() {
   const [returnDate, setReturnDate] = useState('');
   const [sameLocation, setSameLocation] = useState(true);
   const [activeFaq, setActiveFaq] = useState(0);
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactSubmitted, setContactSubmitted] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (window.location.hash === '#contact') {
+      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
+
+  function handleContactSubmit(event) {
+    event.preventDefault();
+    setContactSubmitted(true);
+    setContactName('');
+    setContactEmail('');
+    setContactMessage('');
+  }
 
   const destination = useMemo(
     () => DESTINATIONS.find((item) => item.id === selectedDestination) || DESTINATIONS[0],
@@ -198,8 +217,12 @@ export default function Home() {
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="overflow-hidden rounded-[2rem] shadow-soft">
-            <img src={destination.image} alt={destination.title} className="h-full min-h-[360px] w-full object-cover" />
+          <div className="relative aspect-[5/3] min-h-[360px] w-full overflow-hidden rounded-[2rem] shadow-soft">
+            <img
+              src={destination.image}
+              alt={destination.title}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
           </div>
           <div className="glass-panel p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand">{destination.subtitle}</p>
@@ -269,28 +292,97 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
-        <div className="rounded-[2.5rem] bg-brand px-8 py-12 text-white shadow-soft">
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.8fr]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-gold">Customer Care</p>
-              <h2 className="mt-4 font-heading text-5xl">Support that stays human, even when the system scales.</h2>
-              <p className="mt-5 max-w-2xl text-slate-200">
-                Need a booking adjustment, manager follow-up, or help selecting the right fleet size? Reach the care desk and we’ll guide the next step.
-              </p>
-            </div>
-            <div className="grid gap-4">
+      <section id="contact" className="mx-auto max-w-7xl scroll-mt-28 px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-soft sm:p-10 lg:p-12">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand">Contact Us</p>
+            <h2 className="mt-4 font-heading text-4xl text-ink sm:text-5xl">
+              Questions about rentals, fleet, or your account?
+            </h2>
+            <p className="mt-4 text-sm leading-6 text-slate-500 sm:text-base">
+              Reach our team by phone, email, or the form below. We typically respond within one business day.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               {[
-                { title: 'Booking Hotline', body: '+1 (800) 555-0199' },
-                { title: 'Email Support', body: 'care@velocerentals.com' },
-                { title: 'Manager Desk', body: 'Operations assistance 24/7' },
-              ].map((item) => (
-                <div key={item.title} className="rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                  <p className="text-sm uppercase tracking-[0.25em] text-gold">{item.title}</p>
-                  <p className="mt-2 text-lg text-white">{item.body}</p>
-                </div>
-              ))}
+                { icon: Phone, title: 'Phone', body: CONTACT_INFO.phone, href: `tel:${CONTACT_INFO.phone.replace(/\D/g, '')}` },
+                { icon: Mail, title: 'Email', body: CONTACT_INFO.email, href: `mailto:${CONTACT_INFO.email}` },
+                { icon: MapPin, title: 'Office', body: CONTACT_INFO.address, href: null },
+              ].map((item) => {
+                const Icon = item.icon;
+                const content = (
+                  <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-brand/30 hover:bg-white">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <p className="mt-4 text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">{item.title}</p>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-ink sm:text-base">{item.body}</p>
+                    {item.title === 'Phone' ? (
+                      <p className="mt-2 text-xs text-slate-500">{CONTACT_INFO.hours}</p>
+                    ) : null}
+                  </div>
+                );
+                return item.href ? (
+                  <a key={item.title} href={item.href} className="block">
+                    {content}
+                  </a>
+                ) : (
+                  <div key={item.title}>{content}</div>
+                );
+              })}
             </div>
+
+            <form onSubmit={handleContactSubmit} className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 sm:p-8">
+              <h3 className="font-heading text-2xl text-ink">Send us a message</h3>
+              <p className="mt-2 text-sm text-slate-500">Share your question and we will follow up by email.</p>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <label className="block sm:col-span-1">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Name</span>
+                  <input
+                    required
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  />
+                </label>
+                <label className="block sm:col-span-1">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Email</span>
+                  <input
+                    required
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Message</span>
+                  <textarea
+                    required
+                    rows={4}
+                    value={contactMessage}
+                    onChange={(e) => setContactMessage(e.target.value)}
+                    placeholder="How can we help?"
+                    className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                className="mt-6 w-full rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-ink sm:w-auto"
+              >
+                Submit message
+              </button>
+              {contactSubmitted ? (
+                <p className="mt-4 text-sm font-medium text-emerald-600" role="status">
+                  Thank you — your message has been received. Our team will reply soon.
+                </p>
+              ) : null}
+            </form>
           </div>
         </div>
       </section>
