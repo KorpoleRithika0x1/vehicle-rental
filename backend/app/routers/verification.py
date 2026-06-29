@@ -89,6 +89,9 @@ async def approve_account(
         )
     
     user.account_status = AccountStatus.ACTIVE
+    user.license_verified = True
+    if not user.license_document_url:
+        user.license_document_url = user.license_image_url
     user.verification_reviewed_by = str(current_user.id)
     user.verification_reviewed_at = datetime.utcnow()
     user.rejection_reason = None
@@ -139,6 +142,7 @@ async def reject_account(
         )
     
     user.account_status = AccountStatus.REJECTED
+    user.license_verified = False
     user.rejection_reason = payload.reason
     user.verification_reviewed_by = str(current_user.id)
     user.verification_reviewed_at = datetime.utcnow()

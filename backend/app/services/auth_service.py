@@ -163,8 +163,13 @@ async def register_customer_with_verification(
         phone_number=phone_number,
         role=UserRole.CUSTOMER,
         account_status=AccountStatus.PENDING_VERIFICATION,
+        license_verified=False,
+        license_document_url=license_image_url,
         license_image_url=license_image_url,
         live_photo_url=live_photo_url,
+        verification_reviewed_by=None,
+        verification_reviewed_at=None,
+        rejection_reason=None,
     )
     db.add(user)
     await db.commit()

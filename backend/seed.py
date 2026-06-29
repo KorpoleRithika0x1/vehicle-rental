@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.database import AsyncSessionLocal, Base, engine
 from app.models import (
+    AccountStatus,
     Booking,
     BookingStatus,
     FuelType,
@@ -117,11 +118,16 @@ async def seed_users(session):
                 password_hash=hash_password(record["password"]),
                 role=record["role"],
                 phone_number=record["phone_number"],
+                account_status=AccountStatus.ACTIVE,
+                license_verified=record["role"] == UserRole.CUSTOMER,
             )
             session.add(user)
             created.append(user)
-    if created:
-        await session.commit()
+        else:
+            user.account_status = AccountStatus.ACTIVE
+            if record["role"] == UserRole.CUSTOMER:
+                user.license_verified = True
+    await session.commit()
     return {user.email: user for user in (await session.execute(select(User))).scalars().all()}
 
 
